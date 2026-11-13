@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "graphviz-mcp"
 version = "0.1.0"
-description = "MCP server exposing the Graphviz suite (layout engines and graph-processing tools)"
+description = "An MCP service for the full Graphviz tool suite"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 license-files = ["LICENSE"]
-authors = [{ name = "graphviz-mcp contributors" }]
+authors = [ { name = "Rodney Waldhoff" }, { name = "graphviz-mcp contributors" } ]
 dependencies = [
   "mcp>=2.3,<3",
   "jinja2>=3.1,<4",
