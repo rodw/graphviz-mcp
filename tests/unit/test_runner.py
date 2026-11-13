@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -185,3 +186,54 @@ async def test_call_slot_blocks_other_calls(settings: Settings) -> None:
         async with runner.call_slot():
             pass
     await holder
+
+
+async def test_call_shares_one_budget_across_runs(settings: Settings) -> None:
+    runner = Runner(replace(settings, timeout_s=1), {"sleep": SLEEP})
+    async with runner.workdir() as wd, runner.call_slot():
+        started = time.monotonic()
+        await runner.run("sleep", ["0.6"], workdir=wd)
+        with pytest.raises(TimedOut, match=r"timed out after 1s"):  # the call budget, not the 0.4s remainder
+            await runner.run("sleep", ["0.6"], workdir=wd)
+        assert time.monotonic() - started < 1.4
+
+
+async def test_exhausted_budget_does_not_spawn(settings: Settings) -> None:
+    runner = Runner(replace(settings, timeout_s=0.3), {"sh": SH})
+    async with runner.workdir() as wd, runner.call_slot():
+        await asyncio.sleep(0.4)
+        with pytest.raises(TimedOut):
+            await runner.run("sh", ["-c", "touch ran"], workdir=wd)
+        assert not (wd / "ran").exists()
+
+
+async def test_no_budget_outside_a_call(settings: Settings) -> None:
+    runner = Runner(replace(settings, timeout_s=1), {"sleep": SLEEP})
+    async with runner.workdir() as wd:
+        await runner.run("sleep", ["0.6"], workdir=wd)
+        await runner.run("sleep", ["0.6"], workdir=wd)
+
+
+async def test_explicit_shorter_timeout_wins_and_nested_call_keeps_outer_budget(settings: Settings) -> None:
+    runner = Runner(replace(settings, timeout_s=1), {"sleep": SLEEP})
+    async with runner.workdir() as wd, runner.call_slot():
+        with pytest.raises(TimedOut, match=r"timed out after 0\.2s"):
+            await runner.run("sleep", ["1"], workdir=wd, timeout_s=0.2)
+        await asyncio.sleep(0.7)
+        async with runner.call_slot():  # must not restart the clock
+            with pytest.raises(TimedOut):
+                await runner.run("sleep", ["0.6"], workdir=wd)
+
+
+async def test_queue_time_is_not_charged_to_the_budget(settings: Settings) -> None:
+    runner = Runner(replace(settings, timeout_s=1, concurrency=1, queue_size=2, queue_wait_s=5), {"sleep": SLEEP})
+
+    async def hold() -> None:
+        async with runner.workdir() as wd:
+            await runner.run("sleep", ["0.6"], workdir=wd)
+
+    first = asyncio.create_task(hold())
+    await asyncio.sleep(0.1)
+    async with runner.call_slot(), runner.workdir() as wd:  # waits ~0.5s for the slot first
+        await runner.run("sleep", ["0.8"], workdir=wd)
+    await first

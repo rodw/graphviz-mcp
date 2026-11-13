@@ -23,6 +23,8 @@ from .config import Settings
 
 _GRACE_S = 1.0
 _slot_held: contextvars.ContextVar[bool] = contextvars.ContextVar("gvmcp_slot_held", default=False)
+# time.monotonic() value by which the current tool call (see Runner.call_slot) must be finished
+_deadline: contextvars.ContextVar[float | None] = contextvars.ContextVar("gvmcp_deadline", default=None)
 _CHUNK = 65536
 
 
@@ -122,12 +124,16 @@ class Runner:
         """Hold one concurrency slot for a whole tool call (parse pre-pass, pre-flight and the run itself).
 
         The busy decision is made once, up front. Individual runs inside the block do not take another slot.
+        The block also gets one wall-clock budget (``timeout_s``), shared by every run in it and starting once the
+        slot is held, so time spent queueing is not counted. A nested block keeps the outer budget.
         """
         async with self._slot():
             token = _slot_held.set(True)
+            deadline_token = _deadline.set(_deadline.get() or time.monotonic() + self._s.timeout_s)
             try:
                 yield
             finally:
+                _deadline.reset(deadline_token)
                 _slot_held.reset(token)
 
     @contextlib.asynccontextmanager
@@ -185,13 +191,20 @@ class Runner:
         if binary is None:
             raise UnknownProgram(f"program {program!r} is not available")
         timeout = self._s.timeout_s if timeout_s is None else timeout_s
+        reported = timeout  # what a timeout message names
+        if (deadline := _deadline.get()) is not None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimedOut(f"timed out after {self._s.timeout_s:g}s")
+            if remaining < timeout:
+                timeout, reported = remaining, self._s.timeout_s  # the shared budget, not this run's share, ran out
         if not slot:
-            return await self._spawn(binary, args, stdin, workdir, timeout)
+            return await self._spawn(binary, args, stdin, workdir, timeout, reported)
         async with self._slot():
-            return await self._spawn(binary, args, stdin, workdir, timeout)
+            return await self._spawn(binary, args, stdin, workdir, timeout, reported)
 
     async def _spawn(
-        self, binary: Path, args: Sequence[str], stdin: bytes | None, workdir: Path, timeout: float
+        self, binary: Path, args: Sequence[str], stdin: bytes | None, workdir: Path, timeout: float, reported: float
     ) -> RunResult:
         s = self._s
         mem = s.memory_mb * 1024 * 1024 if s.memory_mb else -1
@@ -213,7 +226,7 @@ class Runner:
                 rc = await proc.wait()
         except TimeoutError:
             await self._kill(proc)
-            raise TimedOut(f"timed out after {timeout:g}s") from None
+            raise TimedOut(f"timed out after {reported:g}s") from None
         except BaseException:
             await asyncio.shield(self._kill(proc))
             raise

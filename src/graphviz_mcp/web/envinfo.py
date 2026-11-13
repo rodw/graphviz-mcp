@@ -29,7 +29,10 @@ ENV_VARS: tuple[EnvVar, ...] = (
     EnvVar("PORT", "port", "Network", "8000", "HTTP port (1-65535)."),
     EnvVar("ALLOWED_HOSTS", "allowed_hosts", "Network", "(localhost names only)",
            "Extra Host header values to accept, comma separated (name, name:port or name:*)."),
-    EnvVar("TIMEOUT_S", "timeout_s", "Limits", "30", "Wall-clock limit per Graphviz run, in seconds."),
+    EnvVar(
+        "TIMEOUT_S", "timeout_s", "Limits", "30",
+        "Wall-clock time limit per tool request, in seconds. Time spent waiting for a free slot is not counted.",
+    ),
     EnvVar("MAX_INPUT_BYTES", "max_input_bytes", "Limits", "1000000", "Largest accepted input."),
     EnvVar("MAX_OUTPUT_BYTES", "max_output_bytes", "Limits", "20000000",
            "Output is cut off and the run killed beyond this."),

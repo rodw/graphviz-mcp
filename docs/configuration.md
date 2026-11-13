@@ -39,7 +39,7 @@ In the Docker image the server listens on 0.0.0.0 inside the container; publish 
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `GVMCP_TIMEOUT_S` | `30` | Wall-clock limit per Graphviz run, in seconds |
+| `GVMCP_TIMEOUT_S` | `30` | Wall-clock time limit per tool request, in seconds. Time spent waiting for a free slot is not counted. |
 | `GVMCP_MAX_INPUT_BYTES` | `1000000` | Largest accepted input |
 | `GVMCP_MAX_OUTPUT_BYTES` | `20000000` | Output is cut off and the run killed beyond this |
 | `GVMCP_MAX_STDERR_BYTES` | `64000` | Stderr kept per run |
