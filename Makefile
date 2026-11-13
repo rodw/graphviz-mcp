@@ -78,7 +78,7 @@ HADOLINT_IMAGE_NAME ?= hadolint/hadolint
 HADOLINT_IMAGE = $(HADOLINT_IMAGE_NAME):$(HADOLINT_IMAGE_TAG)
 HADOLINT_FAILURE_THRESHOLD ?= warning
 #------------------------------------------------------------------------------
-TRIVY_IMAGE_TAG ?= 0.76.1
+TRIVY_IMAGE_TAG ?= 0.76.2
 TRIVY_IMAGE_NAME ?= aquasec/trivy
 TRIVY_IMAGE = $(TRIVY_IMAGE_NAME):$(TRIVY_IMAGE_TAG)
 TRIVY_SEVERITY ?= HIGH,CRITICAL
