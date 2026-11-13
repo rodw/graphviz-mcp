@@ -71,6 +71,13 @@ SERVICE_CONTAINER_NAME ?= $(DOCKER_IMAGE_NAME)-http
 SERVICE_HTTP_BIND_ADDR ?= 127.0.0.1
 SERVICE_HTTP_PORT ?= 8000
 SERVICE_HARDENING_ARGS ?= --read-only --tmpfs /tmp:rw,noexec,nosuid,size=256m --cap-drop=ALL --security-opt no-new-privileges
+# Container-wide ceilings (not reservations). SERVICE_MEMORY must stay above GVMCP_MEMORY_MB (4096, the per-process address-space
+# cap) + the /tmp tmpfs (256m, RAM) + ~0.5g for the server itself, or the kernel OOM-kills a runaway call before the cap can fail it
+# cleanly. SERVICE_MEMORY_SWAP equal to SERVICE_MEMORY means no swap. A blank value drops the flag (eg. `make start SERVICE_MEMORY=`).
+SERVICE_MEMORY ?= 5g
+SERVICE_MEMORY_SWAP ?= $(SERVICE_MEMORY)
+SERVICE_PIDS_LIMIT ?= 512
+SERVICE_RESOURCE_ARGS ?= $(if $(SERVICE_MEMORY),--memory $(SERVICE_MEMORY) --memory-swap $(SERVICE_MEMORY_SWAP)) $(if $(SERVICE_PIDS_LIMIT),--pids-limit $(SERVICE_PIDS_LIMIT))
 SERVICE_DOCKER_ARGS ?=
 SERVICE_START_TIMEOUT_SECONDS ?= 30
 #------------------------------------------------------------------------------
@@ -404,10 +411,10 @@ run: run-http # alias for run-http
 
 run-http: docker.check-daemon $(DOCKER_IMAGE_STAMP) ## run the HTTP server in the foreground
 	@"${HOST_DOCKER_EXE}" run --rm --name "$(SERVICE_CONTAINER_NAME)" -p "$(SERVICE_HTTP_BIND_ADDR):$(SERVICE_HTTP_PORT):8000" \
-		$(SERVICE_HARDENING_ARGS) $(SERVICE_DOCKER_ARGS) "$(SERVICE_IMAGE)" --http
+		$(SERVICE_HARDENING_ARGS) $(SERVICE_RESOURCE_ARGS) $(SERVICE_DOCKER_ARGS) "$(SERVICE_IMAGE)" --http
 
 run-stdio: docker.check-daemon $(DOCKER_IMAGE_STAMP) # run the stdio server in the foreground
-	@"${HOST_DOCKER_EXE}" run -i --rm --network=none $(SERVICE_HARDENING_ARGS) $(SERVICE_DOCKER_ARGS) "$(SERVICE_IMAGE)" --stdio
+	@"${HOST_DOCKER_EXE}" run -i --rm --network=none $(SERVICE_HARDENING_ARGS) $(SERVICE_RESOURCE_ARGS) $(SERVICE_DOCKER_ARGS) "$(SERVICE_IMAGE)" --stdio
 
 start: docker.check-daemon $(DOCKER_IMAGE_STAMP) ## start the HTTP server in the background
 	@name="$(SERVICE_CONTAINER_NAME)"; \
@@ -415,18 +422,18 @@ start: docker.check-daemon $(DOCKER_IMAGE_STAMP) ## start the HTTP server in the
 		printf "$(STY_WARN)WARNING:$(STY_RESET) %s is already running (see: make status)\n" "$$name" >&2; exit 0; fi; \
 	"${HOST_DOCKER_EXE}" rm -f "$$name" >/dev/null 2>&1; \
 	"${HOST_DOCKER_EXE}" run -d --name "$$name" -p "$(SERVICE_HTTP_BIND_ADDR):$(SERVICE_HTTP_PORT):8000" \
-		$(SERVICE_HARDENING_ARGS) $(SERVICE_DOCKER_ARGS) "$(SERVICE_IMAGE)" --http >/dev/null \
+		$(SERVICE_HARDENING_ARGS) $(SERVICE_RESOURCE_ARGS) $(SERVICE_DOCKER_ARGS) "$(SERVICE_IMAGE)" --http >/dev/null \
 		|| { "${HOST_DOCKER_EXE}" rm -f "$$name" >/dev/null 2>&1; exit 1; }; \
 	if [ -n "$(HOST_CURL_EXE)" ] && command -v "$(HOST_CURL_EXE)" >/dev/null 2>&1; then \
 		i=0; \
-		until "$(HOST_CURL_EXE)" -fsS -o /dev/null "http://${SERVICE_HTTP_BIND_ADDR}:$(SERVICE_HTTP_PORT)/health" 2>/dev/null; do \
+		until "$(HOST_CURL_EXE)" -fsS -o /dev/null "http://${SERVICE_HTTP_BIND_ADDR}:$(SERVICE_HTTP_PORT)/ready" 2>/dev/null; do \
 			if [ "$$("${HOST_DOCKER_EXE}" inspect -f '{{.State.Running}}' "$$name")" != true ] || [ "$$i" -ge "$(SERVICE_START_TIMEOUT_SECONDS)" ]; then \
-				printf "$(STY_FAILURE)%s did not become healthy; last logs:$(STY_RESET)\n" "$$name" >&2; \
+				printf "$(STY_FAILURE)%s did not become ready; last logs:$(STY_RESET)\n" "$$name" >&2; \
 				"${HOST_DOCKER_EXE}" logs --tail=20 "$$name" >&2; exit 1; fi; \
 			i=$$((i + 1)); sleep 1; \
 		done; \
 	else \
-		printf "$(STY_WARN)WARNING:$(STY_RESET) HOST_CURL_EXE ('%s') is blank or not on the PATH; health check skipped\n" "$(HOST_CURL_EXE)" >&2; \
+		printf "$(STY_WARN)WARNING:$(STY_RESET) HOST_CURL_EXE ('%s') is blank or not on the PATH; server readiness check skipped\n" "$(HOST_CURL_EXE)" >&2; \
 	fi; \
 	printf "started %s ($(SERVICE_IMAGE))\n  Web UI: http://$(SERVICE_HTTP_BIND_ADDR):$(SERVICE_HTTP_PORT)/ui\n  MCP:    http://$(SERVICE_HTTP_BIND_ADDR):$(SERVICE_HTTP_PORT)/mcp\n" "$$name"
 

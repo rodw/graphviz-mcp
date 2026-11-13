@@ -82,7 +82,7 @@ class PolicyEngine:
             return None
         cap = self._max_pixels
         static = raster.static_bound(scan)
-        if static is not None and static.pixels * 4 <= cap:
+        if static is not None and static.pixels <= cap:
             return static
         if self._preflight:
             result = await self._runner.run(program, [*args, "-Tplain"], text.encode("utf-8"), workdir=workdir)

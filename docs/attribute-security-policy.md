@@ -60,6 +60,7 @@ docker run --rm -p 127.0.0.1:8000:8000 \
   --tmpfs /tmp:rw,noexec,nosuid,size=256m \
   --cap-drop=ALL \
   --security-opt no-new-privileges \
+  --pids-limit 512 --memory 5g --memory-swap 5g \
   -e GVMCP_ATTR_POLICY=allowlist \
   graphviz-mcp:dev
 ```
@@ -124,6 +125,7 @@ docker run --rm -p 127.0.0.1:8000:8000 \
   --tmpfs /tmp:rw,noexec,nosuid,size=256m \
   --cap-drop=ALL \
   --security-opt no-new-privileges \
+  --pids-limit 512 --memory 5g --memory-swap 5g \
   -e GVMCP_ATTR_POLICY=allowlist \
   -e GVMCP_ATTR_POLICY_FILE=/policy.toml \
   -v "$PWD/my-policy.toml:/policy.toml:ro" \

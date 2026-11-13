@@ -10,6 +10,11 @@ from pathlib import Path
 
 ENV_PREFIX = "GVMCP_"
 POLICY_MODES = ("denylist", "allowlist", "unrestricted")
+# HTTP envelope above GVMCP_MAX_INPUT_BYTES: JSON escaping is at most 6x (a control byte becomes \u00XX),
+# percent-encoding at most 3x; the slack covers the JSON-RPC wrapper and the other tool arguments / form fields.
+JSON_EXPANSION = 6
+FORM_EXPANSION = 4
+ENVELOPE_SLACK = 64_000
 
 
 class ConfigError(ValueError):
@@ -44,6 +49,16 @@ class Settings:
     @property
     def cpu_limit_s(self) -> int:
         return int(self.timeout_s) + 5
+
+    @property
+    def max_mcp_body_bytes(self) -> int:
+        """Largest accepted ``/mcp`` request body: the input cap after worst-case JSON escaping, plus slack."""
+        return self.max_input_bytes * JSON_EXPANSION + ENVELOPE_SLACK
+
+    @property
+    def max_form_body_bytes(self) -> int:
+        """Largest accepted Web UI form body: the input cap after percent-encoding, plus other fields."""
+        return self.max_input_bytes * FORM_EXPANSION + ENVELOPE_SLACK
 
 
 def _get(env: Mapping[str, str], name: str) -> str | None:

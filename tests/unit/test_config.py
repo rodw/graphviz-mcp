@@ -62,3 +62,11 @@ def test_missing_graphviz(tmp_path: Path) -> None:
         load_settings({"GVMCP_GRAPHVIZ_BIN": str(tmp_path)})
     with pytest.raises(ConfigError, match="not found"):
         load_settings({"PATH": str(tmp_path)})
+
+
+def test_http_body_limits_follow_the_input_cap(tmp_path: Path) -> None:
+    s = load_settings(env(tmp_path))
+    assert s.max_mcp_body_bytes == 6 * 1_000_000 + 64_000
+    assert s.max_form_body_bytes == 4 * 1_000_000 + 64_000
+    big = load_settings(env(tmp_path, MAX_INPUT_BYTES="5000000"))
+    assert big.max_mcp_body_bytes > 4 * 1024 * 1024 and big.max_mcp_body_bytes > s.max_mcp_body_bytes

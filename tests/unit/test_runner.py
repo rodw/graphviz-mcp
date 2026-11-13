@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import subprocess
 import sys
 import time
 from dataclasses import replace
@@ -140,6 +141,13 @@ async def test_queue_wait_timeout_gives_busy(settings: Settings) -> None:
 
 def test_scrub() -> None:
     assert scrub("error in /a/b/c and /a/b", {"/a/b": "<x>", "/a/b/c": "<y>"}) == "error in <y> and <x>"
+
+
+def test_resource_module_is_loaded_with_runner() -> None:
+    """_limits runs in the forked child (preexec_fn); it must not need to import anything there."""
+    code = "import sys, graphviz_mcp.runner; sys.exit(0 if 'resource' in sys.modules else 1)"
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=30)
+    assert r.returncode == 0, r.stderr
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="RLIMIT_AS is only enforced on Linux")

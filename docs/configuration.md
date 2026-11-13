@@ -40,11 +40,11 @@ In the Docker image the server listens on 0.0.0.0 inside the container; publish 
 | Variable | Default | Meaning |
 |---|---|---|
 | `GVMCP_TIMEOUT_S` | `30` | Wall-clock time limit per tool request, in seconds. Time spent waiting for a free slot is not counted. |
-| `GVMCP_MAX_INPUT_BYTES` | `1000000` | Largest accepted input |
+| `GVMCP_MAX_INPUT_BYTES` | `1000000` | Largest accepted input. Over HTTP the whole request body is also capped, before it is read: at 6 times this plus 64 KB for `/mcp` (room for JSON escaping), and 4 times this plus 64 KB for Web UI forms. A larger request gets a 413 and a `Content-Length` that is not a single plain number gets a 400. |
 | `GVMCP_MAX_OUTPUT_BYTES` | `20000000` | Output is cut off and the run killed beyond this |
 | `GVMCP_MAX_STDERR_BYTES` | `64000` | Stderr kept per run |
-| `GVMCP_MEMORY_MB` | `4096` | Address-space limit per Graphviz process; `0` disables. |
-| `GVMCP_CONCURRENCY` | CPU count | Simultaneous active Graphviz calls allowed |
+| `GVMCP_MEMORY_MB` | `4096` | Address-space (virtual memory) limit per Graphviz process; `0` disables. The container's `--memory` must be larger than this plus the `/tmp` size and the server's own use, or the kernel kills a runaway call first; see [SECURITY.md](../SECURITY.md#running-it-safely). |
+| `GVMCP_CONCURRENCY` | CPU count | Simultaneous active Graphviz calls allowed. Their combined memory is bounded only by the container's `--memory`, so size the two together. |
 | `GVMCP_QUEUE_SIZE` | 4x concurrency | Calls allowed to wait for a free slot; beyond this the server responds with HTTP 503 |
 | `GVMCP_QUEUE_WAIT_S` | `30` | How long a queued request may wait before the server answers "busy" |
 | `GVMCP_MAX_RASTER_PIXELS` | `50000000` | Pixel budget for raster output |
