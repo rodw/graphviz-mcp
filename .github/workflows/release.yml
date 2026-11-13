@@ -61,7 +61,7 @@ jobs:
         id: version
         run: echo "version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")" >> "$GITHUB_OUTPUT"
       - id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           build-args: APP_VERSION=${{ steps.version.outputs.version }}
