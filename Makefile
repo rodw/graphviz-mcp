@@ -40,7 +40,7 @@ MAKEFLAGS += --no-builtin-rules
 #----------------------------------------- overridable and derived variables --
 HOST_DOCKER_EXE ?= docker
 MIN_DOCKER_VERSION ?= 23.0
-HOST_PYTHON_EXE ?= $(shell command -v python3.12 2>/dev/null || command -v python3 2>/dev/null || command -v python 2>/dev/null || echo python)
+HOST_PYTHON_EXE ?= $(shell command -v python3.13 2>/dev/null || command -v python3 2>/dev/null || command -v python 2>/dev/null || echo python)
 HOST_CURL_EXE ?= curl
 VENV_DIR ?= .venv
 VENV_BIN_DIR ?= ${VENV_DIR}/bin

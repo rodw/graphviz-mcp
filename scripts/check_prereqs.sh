@@ -47,7 +47,7 @@ printf 'Checking host prerequisites\n'
 printf '\npython (%s)\n' "$PYTHON"
 min_python="$(sed -n 's/^requires-python *= *"[>=~ ]*\([0-9][0-9.]*\)".*/\1/p' "$ROOT/pyproject.toml" 2>/dev/null | head -n 1)"
 if ! have "$PYTHON"; then
-	fail "not found (set HOST_PYTHON_EXE; need Python >= ${min_python:-3.12})"
+	fail "not found (set HOST_PYTHON_EXE; need Python >= ${min_python:-3.13})"
 else
 	py_version="$("$PYTHON" -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])' 2>/dev/null)"
 	if [ -z "$py_version" ]; then

@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: pip
           cache-dependency-path: requirements.lock
       - run: python -m pip install -e '.[dev]' -c requirements.lock
@@ -71,7 +71,7 @@ jobs:
           cache-to: type=gha,scope=${{ matrix.arch }},mode=max
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: pip
           cache-dependency-path: requirements.lock
       - run: python -m pip install -e '.[dev]' -c requirements.lock
