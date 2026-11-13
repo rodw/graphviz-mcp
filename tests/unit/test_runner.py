@@ -129,10 +129,15 @@ def test_scrub() -> None:
 
 @pytest.mark.skipif(sys.platform != "linux", reason="RLIMIT_AS is only enforced on Linux")
 async def test_memory_limit_enforced_on_linux(settings: Settings) -> None:
-    runner = Runner(replace(settings, memory_mb=64), {"sh": SH})
+    # The child must really try to allocate more than the limit: a streaming pipeline (head | tr | wc) never holds the
+    # data, so it would not exercise RLIMIT_AS. A MemoryError also distinguishes "limited" from "failed to start".
+    runner = Runner(replace(settings, memory_mb=256), {"py": Path(sys.executable)})
+    code = (
+        "try:\n    bytearray(500_000_000)\nexcept MemoryError:\n    print('limited')\nelse:\n    print('allocated')\n"
+    )
     async with runner.workdir() as wd:
-        r = await runner.run("sh", ["-c", "head -c 200000000 /dev/zero | tr '\\0' x | wc -c"], workdir=wd)
-    assert r.returncode != 0 or r.stdout.strip() != b"200000000"
+        r = await runner.run("py", ["-c", code], workdir=wd)
+    assert r.stdout.strip() == b"limited", r
 
 
 async def test_call_slot_is_held_once_for_nested_runs(settings: Settings) -> None:
