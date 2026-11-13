@@ -70,8 +70,11 @@ SERVICE_DOCKER_ARGS ?=
 SERVICE_START_TIMEOUT_SECONDS ?= 30
 #------------------------------------------------------------------------------
 AUDIT_IMAGE ?= $(DOCKER_IMAGE_NAME):dev
-# 0 = report the image size only; set a ceiling (in MB) to fail above it
-MAX_DOCKER_IMAGE_SIZE_MB ?= 100
+# 0 = report the image size only; set a ceiling (in MB) to fail above it.
+# The size is the uncompressed size of the image's filesystem (`du` run inside the image). Unlike `docker image inspect`
+# (compressed or uncompressed depending on the Docker storage backend), it is the same on every backend. It is larger
+# for arm64 than for amd64, so the cap is sized for arm64 (about 278 MB at the time of writing) plus a little headroom.
+MAX_DOCKER_IMAGE_SIZE_MB ?= 300
 #------------------------------------------------------------------------------
 HADOLINT_IMAGE_TAG ?= v2.15.1
 HADOLINT_IMAGE_NAME ?= hadolint/hadolint
@@ -248,11 +251,11 @@ audit.docker.image.scan-run: docker.check-daemon # trivy scan of $(AUDIT_IMAGE) 
 	"${HOST_DOCKER_EXE}" run --rm -v "$$tar:/image.tar:ro" -v $(TRIVY_CACHE_VOLUME):/root/.cache/trivy $(TRIVY_IMAGE) \
 		image --input /image.tar --severity $(TRIVY_SEVERITY) --ignore-unfixed --exit-code $(TRIVY_EXIT_CODE)
 
-audit.docker.image.size-run: docker.check-daemon # report the size and layer sizes of $(AUDIT_IMAGE) (fails above MAX_DOCKER_IMAGE_SIZE_MB when set)
+audit.docker.image.size-run: docker.check-daemon # report the layer sizes and the uncompressed size of $(AUDIT_IMAGE) (fails above MAX_DOCKER_IMAGE_SIZE_MB when set)
 	@"${HOST_DOCKER_EXE}" history --format 'table {{.Size}}\t{{.CreatedBy}}' $(AUDIT_IMAGE)
-	@bytes=$$("${HOST_DOCKER_EXE}" image inspect --format '{{.Size}}' $(AUDIT_IMAGE)); \
-	mb=$$((bytes / 1000000)); \
-	printf '\n%s  %s MB\n' "$(AUDIT_IMAGE)" "$$mb"; \
+	@kb=$$("${HOST_DOCKER_EXE}" run --rm --network=none --entrypoint sh $(AUDIT_IMAGE) -c 'du -sxk / 2>/dev/null | cut -f1'); \
+	mb=$$((kb * 1024 / 1000000)); \
+	printf '\n%s  %s MB (uncompressed)\n' "$(AUDIT_IMAGE)" "$$mb"; \
 	if [ "$(MAX_DOCKER_IMAGE_SIZE_MB)" -gt 0 ] && [ "$$mb" -gt "$(MAX_DOCKER_IMAGE_SIZE_MB)" ]; then \
 		printf 'FAIL: exceeds MAX_DOCKER_IMAGE_SIZE_MB=%s\n' "$(MAX_DOCKER_IMAGE_SIZE_MB)" >&2; exit 1; fi
 
