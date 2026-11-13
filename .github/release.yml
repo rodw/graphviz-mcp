@@ -1,0 +1,19 @@
+# Categories for GitHub's auto-generated release notes (`gh release create --generate-notes`).
+# A PR goes in the first category whose labels match; "*" catches everything else.
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+  categories:
+    - title: Breaking changes
+      labels: [breaking]
+    - title: New features
+      labels: [enhancement, feature]
+    - title: Bug fixes
+      labels: [bug, fix]
+    - title: Dependencies
+      labels: [dependencies]
+    - title: Documentation
+      labels: [documentation]
+    - title: Other changes
+      labels: ["*"]

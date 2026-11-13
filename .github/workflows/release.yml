@@ -105,3 +105,27 @@ jobs:
             ${{ env.DOCKER_IMAGE }}@${{ needs.build.outputs.digest-arm64 }}
       - name: Inspect
         run: docker buildx imagetools inspect ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.version }}
+
+  github-release:
+    name: Create the GitHub Release
+    needs: manifest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write # only this job may write to the repository (to create the release)
+    steps:
+      - name: Create the release (notes are generated from merged PRs; see .github/release.yml)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Re-running the workflow must not fail because the release already exists.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release $TAG already exists; nothing to do."
+            exit 0
+          fi
+          flags=(--verify-tag --generate-notes)
+          [[ "$TAG" == *-* ]] && flags+=(--prerelease)
+          image="${DOCKER_IMAGE,,}:${TAG#v}"
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" \
+            --notes "Docker image: \`docker pull ${image}\`" "${flags[@]}"
