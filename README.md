@@ -19,17 +19,17 @@ The server speaks Streamable HTTP and stdio. The HTTP mode also serves a small f
 ### Prerequisites
 
 * Docker with a running daemon
-* `make` (optional, but the targets below save typing)
+* `make`
 
 ### Build and run
 
-There's no published image yet for a fresh clone, so build one:
+There's no published image yet for a fresh clone, so build one (this passes the version from `pyproject.toml` as the `APP_VERSION` build arg for you):
 
 ```bash
-docker build --build-arg APP_VERSION=0.1.0 -t graphviz-mcp:dev .
+make build.docker-image
 ```
 
-Then start the HTTP server, published to localhost only:
+Then start the HTTP server, published to localhost only (`make start` does the same, building the image first if needed):
 
 ```bash
 docker run --rm -p 127.0.0.1:8000:8000 --read-only --tmpfs /tmp:rw,noexec,nosuid,size=256m --cap-drop=ALL --security-opt no-new-privileges graphviz-mcp:dev
@@ -43,7 +43,7 @@ That gives you:
 
 The `127.0.0.1:` part of `-p` matters. Inside the container the server listens on `0.0.0.0`, so the published address is what keeps it off your network.
 
-From a checkout, the Makefile wraps the same thing: `make start`, `make status`, `make logs`, `make stop`, `make restart`, `make run-http` (foreground) and `make run-stdio`. Set `SERVICE_IMAGE_TAG` to pick an image (default `dev`) and `HTTP_PORT` to change the host port (default 8000). `make help` lists the rest.
+The Makefile wraps the `docker run` commands too: `make start`, `make status`, `make logs`, `make stop`, `make restart`, `make run-http` (foreground) and `make run-stdio`. Set `SERVICE_IMAGE_TAG` to pick an image (default `dev`) and `HTTP_PORT` to change the host port (default 8000). `make help` lists the rest.
 
 The release workflow publishes a multi-arch image to `ghcr.io/<owner>/graphviz-mcp` when a version tag is pushed, so once a release exists you can pull that instead of building.
 
@@ -115,7 +115,7 @@ Every executable in Graphviz's bin directory is classified in [catalog.py](src/g
 
 ## Configuration
 
-Everything is an environment variable, and an invalid value stops the server at startup. The command line also accepts `--http` (the default), `--stdio`, `--host`, `--port` and `--version`.
+The server can be configured via environment variables. Invalid values stops the server at startup. The command line also accepts `--http` (the default), `--stdio`, `--host`, `--port` and `--version`.
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -170,31 +170,33 @@ tests/          unit tests, Docker image integration tests, golden fixtures
 You need Python 3.12 or newer with `venv`, Docker, and `make`. `make audit.prereqs` checks them.
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/ruff check . && .venv/bin/ruff format --check . && .venv/bin/mypy
-.venv/bin/pytest
+make install        # create .venv and install the dev dependencies
+make audit.python   # ruff (lint and format check) and mypy
+make test.unit      # unit tests
 ```
 
 The unit tests need neither Graphviz nor Docker. Tests that depend on the pinned Graphviz (golden SVGs, renderers, security, concurrency) run against the built image:
 
 ```bash
-docker build --build-arg APP_VERSION=0.1.0 -t graphviz-mcp:dev . && .venv/bin/pytest -m docker_image
+make test.docker-image    # builds the image if it is stale, then runs the `docker_image` tests
 ```
+
+`make test` runs both the unit and the image tests, and `make audit` runs the source checks (licenses, release version, generated docs, Python lint and types, Dockerfile lint).
 
 Coverage and housekeeping:
 
 ```bash
 make test-coverage.docker-image      # Docker image tests with coverage of the code inside the containers
 make test-coverage                   # unit and image tests, one combined report
-.venv/bin/python scripts/gen_tool_docs.py     # regenerate docs/graphviz-tools.md
-.venv/bin/python scripts/check_licenses.py    # dependency license policy
+make update.docs.tools-md            # regenerate docs/graphviz-tools.md
+make audit.licenses                  # dependency license policy
 ```
 
 CI (`.github/workflows/ci.yml`) runs lint, type checks, unit tests and the license check, then builds the image on amd64 and arm64 and runs the image tests on each. In the Dockerfile the base image is pinned by digest and the Graphviz source by SHA-256, and the final stage has no compiler.
 
 ## Contributing
 
-Issues and pull requests are welcome. Before opening one, run ruff, mypy and the unit tests, and run the Docker image tests if you touched anything that affects Graphviz behavior. If you change a tool spec, regenerate `docs/graphviz-tools.md`.
+Issues and pull requests are welcome. Before opening one, run ruff, mypy and the unit tests, and run the Docker image tests if you touched anything that affects Graphviz behavior. If you change a tool spec, regenerate `docs/graphviz-tools.md` by running `make update.docs.tools-md` (`make update` refreshes all generated files, and `make audit.docs` checks that they are up to date).
 
 ## License
 
