@@ -26,7 +26,8 @@ MAKEFLAGS += --no-builtin-rules
 .PHONY: update.test-fixtures update.test-fixtures.golden update.attribute-list
 .PHONY: build build.docker-image build.docker-image-coverage rebuild.docker-image
 .PHONY: test test.unit test.docker-image
-.PHONY: test-coverage test-coverage.unit test-coverage.docker-image test-coverage.docker-image-run
+.PHONY: test-coverage test-coverage.unit test-coverage.unit-run test-coverage.docker-image test-coverage.docker-image-run
+.PHONY: test-coverage.all-run
 .PHONY: run run-http run-stdio start stop restart status logs
 .PHONY: clean clean-all uninstall
 .PHONY: clean.python clean.python.bytecode clean.python.caches clean.python.venv clean.stamps clean.macos
@@ -59,6 +60,10 @@ DOCKER_IMAGE_NAME = ${APP_NAME}
 COVERAGE_IMAGE ?= $(DOCKER_IMAGE_NAME):coverage
 COVERAGE_DOCKER_DIR ?= .coverage-docker
 COVERAGE_ALL_DIR ?= .coverage-all
+# minimum net line coverage of src/graphviz_mcp, enforced by the test-coverage* targets (override on the command line, eg. =0 for a partial run)
+COVERAGE_MIN_UNIT ?= 65
+COVERAGE_MIN_DOCKER ?= 85
+COVERAGE_MIN_COMBINED ?= 90
 #------------------------------------------------------------------------------
 SERVICE_IMAGE_TAG ?= dev
 SERVICE_IMAGE = $(DOCKER_IMAGE_NAME):$(SERVICE_IMAGE_TAG)
@@ -322,19 +327,25 @@ test.unit: $(PYTHON_DEPS_STAMP) # fast tests, no docker (the `docker_image`-mark
 test.docker-image: docker.check-daemon $(DOCKER_IMAGE_STAMP) $(PYTHON_DEPS_STAMP) # run tests against the built docker image
 	GVMCP_REQUIRE_DOCKER=1 GVMCP_TEST_DOCKER_IMAGE=$(DOCKER_IMAGE_NAME):dev "${VENV_PYTEST_EXE}" -m docker_image $(PYTEST_ARGS)
 
-test-coverage: test-coverage.unit test-coverage.docker-image # unit and docker image tests, with one combined coverage report
+test-coverage: test-coverage.unit test-coverage.docker-image test-coverage.all-run # unit and docker image tests, with one combined coverage report (each must meet its minimum: $(COVERAGE_MIN_UNIT)%, $(COVERAGE_MIN_DOCKER)%, $(COVERAGE_MIN_COMBINED)% combined)
+
+test-coverage.all-run: # combine the unit and docker image coverage data from earlier runs; fails below $(COVERAGE_MIN_COMBINED)% line coverage
 	@$(call guard_rm_path,${COVERAGE_ALL_DIR},COVERAGE_ALL_DIR)
 	rm -rf -- "${COVERAGE_ALL_DIR}"
 	mkdir -p "${COVERAGE_ALL_DIR}"
+	@printf 'combined line coverage must be at least %s%%\n' "$(COVERAGE_MIN_COMBINED)"
 	export COVERAGE_FILE="${COVERAGE_ALL_DIR}/.coverage"; \
 	"${VENV_PYTHON_EXE}" -m coverage combine --keep .coverage "${COVERAGE_DOCKER_DIR}/.coverage" \
-		&& "${VENV_PYTHON_EXE}" -m coverage report --skip-empty --show-missing \
-		&& "${VENV_PYTHON_EXE}" -m coverage html -d "${COVERAGE_ALL_DIR}/html"
+		&& "${VENV_PYTHON_EXE}" -m coverage html -d "${COVERAGE_ALL_DIR}/html" \
+		&& "${VENV_PYTHON_EXE}" -m coverage report --skip-empty --show-missing --fail-under=$(COVERAGE_MIN_COMBINED)
 
-test-coverage.unit: $(PYTHON_DEPS_STAMP) # unit tests with a coverage report
-	"${VENV_PYTEST_EXE}" --cov=graphviz_mcp --cov-report=term-missing --cov-report=html:htmlcov $(PYTEST_ARGS)
+test-coverage.unit: $(PYTHON_DEPS_STAMP) # unit tests with a coverage report; fails below $(COVERAGE_MIN_UNIT)% line coverage
+	@$(MAKE) --no-print-directory test-coverage.unit-run
 
-test-coverage.docker-image: $(DOCKER_COVERAGE_IMAGE_STAMP) # docker image tests with line coverage of the code in the containers and on the host
+test-coverage.unit-run: # the unit coverage run itself, without the dependency check (see test-coverage.unit)
+	"${VENV_PYTEST_EXE}" --cov=graphviz_mcp --cov-report=term-missing --cov-report=html:htmlcov --cov-fail-under=$(COVERAGE_MIN_UNIT) $(PYTEST_ARGS)
+
+test-coverage.docker-image: $(DOCKER_COVERAGE_IMAGE_STAMP) # docker image tests with line coverage of the code in the containers and on the host; fails below $(COVERAGE_MIN_DOCKER)%
 	@$(MAKE) --no-print-directory test-coverage.docker-image-run
 
 test-coverage.docker-image-run: docker.check-daemon $(PYTHON_DEPS_STAMP) # the coverage run itself, against an existing $(COVERAGE_IMAGE)
@@ -346,10 +357,11 @@ test-coverage.docker-image-run: docker.check-daemon $(PYTHON_DEPS_STAMP) # the c
 	GVMCP_TEST_DOCKER_IMAGE=$(COVERAGE_IMAGE) GVMCP_DOCKER_COVERAGE_DIR="$(abspath ${COVERAGE_DOCKER_DIR}/data)" \
 		"${VENV_PYTEST_EXE}" -m docker_image --cov=graphviz_mcp --cov-report= $(PYTEST_ARGS); status=$$?; \
 	export COVERAGE_FILE="${COVERAGE_DOCKER_DIR}/.coverage"; \
+	printf 'docker image line coverage must be at least %s%%\n' "$(COVERAGE_MIN_DOCKER)"; \
 	"${VENV_PYTHON_EXE}" -m coverage combine --keep "${COVERAGE_DOCKER_DIR}/data" \
-		&& "${VENV_PYTHON_EXE}" -m coverage report --skip-empty \
-		&& "${VENV_PYTHON_EXE}" -m coverage html -d "${COVERAGE_DOCKER_DIR}/html"; \
-	exit $$status
+		&& "${VENV_PYTHON_EXE}" -m coverage html -d "${COVERAGE_DOCKER_DIR}/html" \
+		&& "${VENV_PYTHON_EXE}" -m coverage report --skip-empty --fail-under=$(COVERAGE_MIN_DOCKER); cov=$$?; \
+	if [ $$status -ne 0 ]; then exit $$status; fi; exit $$cov
 #------------------------------------------------------------------------------
 
 
