@@ -56,7 +56,12 @@ src/graphviz_mcp/
   server.py     MCP and HTTP server wiring
   extras.py     validate_dot, get_capabilities
   config.py     GVMCP_* settings
-docs/           generated tool reference, attribute policy guide
+docs/
+  mcp-service.md                tools, resources and prompts
+  graphviz-tools.md             generated reference for every tool parameter
+  web-ui.md                     the Web UI (screenshots are in docs/screenshots/)
+  configuration.md              GVMCP_* environment variables
+  attribute-security-policy.md  how to choose an attribute policy
 scripts/        doc generators, license check, release version check, prerequisite check
 tests/          unit tests, Docker image integration tests, golden fixtures
 .github/        CI and release workflows, Dependabot and release notes configuration
@@ -115,7 +120,3 @@ Pushing a `vX.Y.Z` tag on `main` starts [release.yml](.github/workflows/release.
 If `main` and `develop` require pull requests, push the release branch and merge it through pull requests instead, then push the tag once `main` has the release commit.
 
 The workflow checks that the tagged commit is on `main` and that the tag matches the project version. It builds the image for amd64 and arm64, publishes it to `ghcr.io/rodw/graphviz-mcp` as `X.Y.Z`, `X.Y` and `latest`, and creates a GitHub Release with generated notes. A tag with a suffix, such as `v1.0.0-rc1`, becomes a pre-release and leaves `latest` alone. It still has to be on `main`.
-
-For a hotfix, use `git flow hotfix start X.Y.Z` and `git flow hotfix finish -m "Release X.Y.Z" X.Y.Z`, with the same version bump and push.
-
-GitHub creates the container package as private on the first release. Make it public in the package settings so people can pull it without signing in.
