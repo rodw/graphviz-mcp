@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# Coverage-instrumented variant of the graphviz-mcp image, used by `make test.docker-image.coverage`.
+# Coverage-instrumented variant of the graphviz-mcp image
 #
 # The shipping image has no usable pip (it is stripped on purpose), so coverage is installed in a throwaway stage on
 # the same Debian base and only the package is copied in. Each server process writes `.coverage.<host>.pid<N>.<rand>`
