@@ -7,7 +7,7 @@ name = "graphviz-mcp"
 version = "0.2.0"
 description = "An MCP service for the full Graphviz tool suite"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 license = { text = "MIT" }
 license-files = ["LICENSE"]
 authors = [ { name = "Rodney Waldhoff" }, { name = "graphviz-mcp contributors" } ]
@@ -44,7 +44,7 @@ packages = ["src/graphviz_mcp"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py312"
+target-version = "py313"
 src = ["src", "tests"]
 extend-exclude = ["scratch", ".scratch", ".claude"]
 
@@ -57,7 +57,7 @@ ignore = ["S101", "S603", "RUF012", "ASYNC109", "S104"]
 "scripts/**" = ["S", "E501"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 strict = true
 files = ["src", "scripts", "tests"]
 mypy_path = "src"

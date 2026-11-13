@@ -4,7 +4,7 @@ Issues and pull requests are welcome. This guide covers setting up a development
 
 ## Development setup
 
-You need Docker with a running daemon, `make`, and Python 3.12 or newer with `venv`. `make audit.prereqs` checks that all three are there.
+You need Docker with a running daemon, `make`, and Python 3.13 or newer with `venv`. `make audit.prereqs` checks that all three are there.
 
 ```bash
 git clone https://github.com/rodw/graphviz-mcp.git

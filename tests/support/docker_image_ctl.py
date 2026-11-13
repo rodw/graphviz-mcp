@@ -38,7 +38,7 @@ def coverage_args() -> list[str]:
     if not COVERAGE_DIR:
         return []
     args = ["-v", f"{COVERAGE_DIR}:/cov"]
-    if core := os.environ.get("COVERAGE_CORE"):  # e.g. `sysmon`, the low-overhead tracer of Python 3.12+
+    if core := os.environ.get("COVERAGE_CORE"):
         args += ["-e", f"COVERAGE_CORE={core}"]
     return args
 
