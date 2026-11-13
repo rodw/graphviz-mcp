@@ -36,7 +36,7 @@ docker run \
     --read-only --cap-drop=ALL \
     --tmpfs /tmp:rw,noexec,nosuid,size=256m \
     --security-opt no-new-privileges \
-    --pids-limit 512 --memory 2g \
+    --pids-limit 512 --memory 5g --memory-swap 5g \
     ghcr.io/rodw/graphviz-mcp:latest
 ```
 
@@ -56,6 +56,8 @@ cd graphviz-mcp
 make run-http # to launch in the foreground
 # or `make start` to launch in the background
 ```
+
+These targets apply the same hardening and container limits as the `docker run` commands above. Tune the limits with `SERVICE_MEMORY`, `SERVICE_MEMORY_SWAP` and `SERVICE_PIDS_LIMIT` (for example `make start SERVICE_MEMORY=8g`).
 
 See `make help` for a list of additional build targets. 
 
@@ -95,7 +97,7 @@ claude mcp add graphviz -- docker run \
   --read-only --cap-drop=ALL \
   --tmpfs /tmp:rw,noexec,nosuid,size=256m \
   --security-opt no-new-privileges \
-  --pids-limit 512 --memory 2g \
+  --pids-limit 512 --memory 5g --memory-swap 5g \
   ghcr.io/rodw/graphviz-mcp:latest --stdio
 ```
 
@@ -111,7 +113,7 @@ Claude Desktop (stdio) in `claude_desktop_config.json`:
                "--read-only", "--cap-drop=ALL", 
                "--tmpfs", "/tmp:rw,noexec,nosuid,size=256m",
                "--security-opt", "no-new-privileges", 
-               "--pids-limit=512", "--memory=2g",
+               "--pids-limit=512", "--memory=5g", "--memory-swap=5g",
                "ghcr.io/rodw/graphviz-mcp:latest", "--stdio"]
     }
   }

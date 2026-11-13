@@ -23,7 +23,7 @@ PREFIX = "graphviz-mcp-test-"
 COVERAGE_DIR = os.environ.get("GVMCP_DOCKER_COVERAGE_DIR")
 HARDENING = [
     "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=256m", "--cap-drop=ALL",
-    "--security-opt", "no-new-privileges", "--pids-limit", "512", "--memory", "2g",
+    "--security-opt", "no-new-privileges", "--pids-limit", "512", "--memory", "5g", "--memory-swap", "5g",
 ]  # fmt: skip
 
 

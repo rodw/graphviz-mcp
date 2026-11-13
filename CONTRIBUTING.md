@@ -42,7 +42,7 @@ make start    # run the HTTP server in the background on 127.0.0.1:8000
 
 The Dockerfile requires an `APP_VERSION` build argument, so a bare `docker build .` fails. The `make` targets read the version from `pyproject.toml` and pass it for you.
 
-`make status`, `make logs`, `make stop` and `make restart` manage the background server. `make run-http` and `make run-stdio` run it in the foreground. Set `SERVICE_IMAGE_TAG` to pick a different image tag (default `dev`) and `HTTP_PORT` to change the host port (default 8000).
+`make status`, `make logs`, `make stop` and `make restart` manage the background server. `make run-http` and `make run-stdio` run it in the foreground. Set `SERVICE_IMAGE_TAG` to pick a different image tag (default `dev`) and `SERVICE_HTTP_PORT` to change the host port (default 8000). These targets also apply container memory and PID ceilings (`SERVICE_MEMORY`, default `5g`; `SERVICE_MEMORY_SWAP`, default the same as the memory ceiling; `SERVICE_PIDS_LIMIT`, default `512`). The memory ceiling must stay above `GVMCP_MEMORY_MB` plus the `/tmp` tmpfs and about 0.5 GB; see [SECURITY.md](SECURITY.md).
 
 ### Generated files
 

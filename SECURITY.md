@@ -28,14 +28,14 @@ docker run \
     --tmpfs /tmp:rw,noexec,nosuid,size=256m \
     --security-opt no-new-privileges \
     --pids-limit 512 \
-    --memory 2g \
+    --memory 5g --memory-swap 5g \
     ghcr.io/rodw/graphviz-mcp:latest
 ```
 
 * Publish to `127.0.0.1` only.
 * Pin an image tag such as `X.Y.Z` instead of `latest` when you want the same image every time.
 * With the stdio transport, add `--network=none`. The server needs no network at all.
-* `--memory` is the real (container-level) memory ceiling. `GVMCP_MEMORY_MB` is a per-process safety net that limits address space per internal Graphviz call.
+* `--memory` is the real (container-level) memory ceiling, shared by every process in the container, including the RAM-backed `/tmp`. `GVMCP_MEMORY_MB` (default 4096) is a per-process safety net that limits the address space of each internal Graphviz call, so that an over-large call fails cleanly. Keep `--memory` above `GVMCP_MEMORY_MB` plus the `/tmp` size plus about 0.5 GB for the server (hence `5g`); if it is smaller, the kernel kills a runaway call before the per-process cap can stop it. Concurrent calls can still add up, so size `--memory` together with `GVMCP_CONCURRENCY`. `--memory-swap` equal to `--memory` disables swap. `--pids-limit` counts threads as well as processes.
 * Prefer `GVMCP_ATTR_POLICY=allowlist` for anything beyond personal use. See [attribute-security-policy.md](docs/attribute-security-policy.md) for details.
 * To serve other host names (a reverse proxy, a LAN name), add them to `GVMCP_ALLOWED_HOSTS`.
 
@@ -48,7 +48,7 @@ See [docs/configuration.md](docs/configuration.md) for more information on the `
 | Reading server files through Graphviz (`image=`, `shapefile=`, `<IMG SRC>`, `stylesheet`, `fontpath`) | Attribute policy on parameters and on the DOT text (parsed by Graphviz's own `nop`), plus Graphviz server mode (`SERVER_NAME`), which refuses all file loads. Details in [attribute-security-policy.md](docs/attribute-security-policy.md). |
 | Writing files or running programs | No `-o/-O/-l/-P/-c`; `gvpr` is not exposed; argv lists only, never a shell; fixed program allowlist; per-call temp dir removed afterwards. |
 | Option injection through values | Values are validated against the flag table; free-form strings need a pattern; attached flag values (`-Tsvg`) cannot start a new option; separate values may not start with `-`; NUL and control characters are rejected; `T` and `K` are checked against the set the running Graphviz reports. |
-| CPU, memory or disk exhaustion | Timeout, `RLIMIT_CPU`, `RLIMIT_AS`, `RLIMIT_FSIZE`, input cap, streamed output cap, stderr cap, raster pixel budget, bounded concurrency with a bounded queue. |
+| CPU, memory or disk exhaustion | Timeout, `RLIMIT_CPU`, `RLIMIT_AS`, `RLIMIT_FSIZE`, container memory and PID ceilings, input cap, streamed output cap, stderr cap, raster pixel budget, bounded concurrency with a bounded queue. |
 | HTTP request-body flood | A body cap on `/mcp` and Web UI form posts, derived from the input cap (see `GVMCP_MAX_INPUT_BYTES`). It is enforced before the body is buffered, parsed or routed: chunked bodies are counted and aborted at the cap, an over-large `Content-Length` is refused without reading anything, and malformed or repeated `Content-Length` values are rejected. It bounds size, not time or connection count. |
 | A runaway call affecting others | Each call runs in its own process group. A timeout or cancellation sends SIGTERM, then SIGKILL, to that group and leaves other calls alone. |
 | Browser-based attacks on a localhost service | DNS rebinding: a `Host` allow-list on every route (the SDK's own check covers only `/mcp`). CSRF: `Origin` and `Sec-Fetch-Site` checks on form posts, urlencoded forms only (no multipart), no cookies. XSS: all output escaped; results shown through `<img src="data:...">`; CSP `default-src 'none'; img-src data:; style-src 'self'; form-action 'self'`. |
