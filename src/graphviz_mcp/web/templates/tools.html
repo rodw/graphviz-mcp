@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Tools{% endblock %}
+{% block main %}
+<h1>Graphviz tools</h1>
+<p>Each tool is a Graphviz program; parameters are named after its command-line flags. Pick one to get a form.</p>
+{% for key, title in groups %}
+{% set members = tools | selectattr("group", "equalto", key) | list %}
+{% if members %}
+<h2>{{ title }}</h2>
+<ul class="tools">
+{% for t in members %}
+  <li><a href="/ui/tools/{{ t.name }}"><code>{{ t.name }}</code></a> <span class="muted">{{ t.summary }}</span></li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,35 @@
+{% from "_icons.html" import octocat %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Graphviz{% endblock %} · graphviz-mcp</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="/ui/static/style.css">
+</head>
+<body>
+<header>
+  <nav aria-label="Primary">
+    <a class="brand" href="/ui">graphviz-mcp</a>
+    <a href="/ui/tools">Tools</a>
+    <a href="/ui/capabilities">Capabilities</a>
+    <a href="/ui/resources">Resources</a>
+    <a href="/ui/docs">Documentation</a>
+    <a href="/ui/status">Status</a>
+    <a href="{{ github_url }}" aria-label="graphviz-mcp on GitHub" title="GitHub">{{ octocat() }}</a>
+  </nav>
+</header>
+<main>
+{% block main %}{% endblock %}
+</main>
+<footer class="muted">
+  <p><strong>graphviz-mcp {{ footer.server.version }}</strong> · Graphviz {{ footer.graphviz_version_line }} · Python {{ footer.server.python }} · MCP SDK {{ footer.server.mcp_sdk }}</p>
+  <nav aria-label="Footer">
+    <a href="/ui/legal/license">License</a>
+    <a href="/ui/legal/third-party-notices">Third-party notices</a>
+    <a href="{{ github_url }}"><span class="no-underline">{{ octocat() }}</span>View on GitHub</a>
+  </nav>
+</footer>
+</body>
+</html>

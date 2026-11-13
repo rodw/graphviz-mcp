@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ name }}{% endblock %}
+{% block main %}
+<h1><code>{{ name }}</code></h1>
+<p>{{ summary }}</p>
+
+{% if failure %}
+<section class="error" id="error" role="alert" data-kind="{{ failure.kind }}">
+  <h2>{% if failure.kind == "policy" %}Rejected by the attribute policy{% elif failure.kind == "busy" %}Server busy
+  {% elif failure.kind == "timeout" %}Timed out{% else %}Could not run{% endif %}</h2>
+  <p id="error-message">{{ failure.message }}</p>
+  {% if failure.kind == "policy" %}<p><a href="/ui/capabilities#policy">See the active policy</a></p>{% endif %}
+</section>
+{% endif %}
+
+{% if blocks %}
+<section class="result" id="result" aria-label="Result">
+<h2>Result</h2>
+{% for b in blocks %}
+  {% if b.kind == "image" %}
+    <p><img id="output-{{ b.index }}" data-kind="image" src="{{ b.src }}" alt="Rendered graph"></p>
+    <p><a href="{{ b.src }}" download="{{ b.filename }}">Download {{ b.filename }}</a></p>
+  {% elif b.kind == "text" %}
+    {% if b.image %}<p><img id="output-image-{{ b.index }}" data-kind="svg" src="{{ b.image }}" alt="Rendered graph"></p>{% endif %}
+    <pre id="output-{{ b.index }}" data-kind="text">{{ b.text }}</pre>
+    <p><a href="{{ b.download }}" download="{{ b.filename }}">Download {{ b.filename }}</a></p>
+  {% elif b.kind == "blob" %}
+    <p id="output-{{ b.index }}" data-kind="blob">{{ b.mime }}, about {{ b.size }} bytes:
+      <a href="{{ b.href }}" download="{{ b.filename }}">Download {{ b.filename }}</a></p>
+  {% elif b.kind == "stderr" %}
+    <h3>Messages from Graphviz</h3>
+    <pre class="stderr" id="stderr-{{ b.index }}" data-kind="stderr">{{ b.text }}</pre>
+  {% endif %}
+{% endfor %}
+</section>
+{% endif %}
+
+{% if validation %}
+<section class="result" id="result" aria-label="Validation">
+<h2>Validation</h2>
+<p><strong class="{{ 'ok' if validation.valid else 'bad' }}">{{ "Valid DOT" if validation.valid else "Not valid DOT" }}</strong>
+{% if validation.valid %} · attribute policy: {{ "accepted" if validation.policy_ok else "would be rejected" }}{% endif %}</p>
+<pre id="output-0" data-kind="text">{{ validation_json }}</pre>
+</section>
+{% endif %}
+
+<form method="post" action="/ui/tools/{{ name }}" id="tool-form">
+{% for f in fields %}
+  <div class="field">
+    <label for="f-{{ f.name }}">{{ f.label }}{% if f.required %} <span aria-hidden="true">*</span>{% endif %}
+      {% if f.flag and f.flag != f.name %}<code class="flag">{{ f.flag }}</code>{% endif %}</label>
+    {% if f.control == "checkbox" %}
+      <input type="checkbox" id="f-{{ f.name }}" name="{{ f.name }}"{% if f.checked %} checked{% endif %}>
+    {% elif f.control == "select" %}
+      <select id="f-{{ f.name }}" name="{{ f.name }}"{% if f.required %} required{% endif %}>
+        <option value="">(default)</option>
+        {% for o in f.options %}<option value="{{ o }}"{% if o == f.value %} selected{% endif %}>{{ o }}</option>{% endfor %}
+      </select>
+    {% elif f.control == "textarea" %}
+      <textarea id="f-{{ f.name }}" name="{{ f.name }}" rows="{{ f.rows }}"{% if f.required %} required{% endif %} spellcheck="false">{{ f.value }}</textarea>
+    {% elif f.control == "datalist-text" %}
+      <input type="text" id="f-{{ f.name }}" name="{{ f.name }}" value="{{ f.value }}" list="dl-{{ f.name }}" autocomplete="off">
+      <datalist id="dl-{{ f.name }}">{% for o in f.options %}<option value="{{ o }}">{% endfor %}</datalist>
+    {% elif f.control == "number" %}
+      <input type="number" id="f-{{ f.name }}" name="{{ f.name }}" value="{{ f.value }}"{% for k, v in f.attrs.items() %} {{ k }}="{{ v }}"{% endfor %}>
+    {% else %}
+      <input type="text" id="f-{{ f.name }}" name="{{ f.name }}" value="{{ f.value }}"{% if f.required %} required{% endif %}{% for k, v in f.attrs.items() %} {{ k }}="{{ v }}"{% endfor %}>
+    {% endif %}
+    <small id="help-{{ f.name }}">{{ f.help }}</small>
+  </div>
+{% endfor %}
+  <button type="submit">Run {{ name }}</button>
+</form>
+{% endblock %}

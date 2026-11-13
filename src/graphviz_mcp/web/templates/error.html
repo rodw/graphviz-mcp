@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block main %}
+<section class="error" id="error" role="alert">
+  <h2>{{ title }}</h2>
+  <p id="error-message">{{ message }}</p>
+  <p><a href="/ui/tools">Back to the tools</a></p>
+</section>
+{% endblock %}

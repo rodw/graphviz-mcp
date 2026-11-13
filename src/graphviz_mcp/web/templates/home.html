@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block main %}
+<h1>graphviz-mcp</h1>
+<p>Graphviz as a web service and as MCP tools. For a single operator or a private network. The same tools are available to MCP clients at <code>/mcp</code>.</p>
+<p><a href="/ui/tools">Browse the tools</a> to try them in a form, or see the <a href="/ui/docs">documentation</a>.</p>
+<h2>For MCP clients</h2>
+<p>These are the instructions this server gives to MCP clients:</p>
+<div class="doc">{{ instructions }}</div>
+{% endblock %}

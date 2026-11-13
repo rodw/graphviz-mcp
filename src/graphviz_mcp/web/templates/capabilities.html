@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Capabilities{% endblock %}
+{% block main %}
+<h1>Capabilities</h1>
+
+<h2 id="versions">Versions</h2>
+<ul>
+    <li>graphviz-mcp {{ doc.server.version }}</li>
+    <li>Graphviz {{ doc.graphviz_version }}</li>
+    <li>Python {{ doc.server.python }}</li>
+    <li>MCP SDK {{ doc.server.mcp_sdk }}</li>
+</ul>
+
+<h2 id="tools">Tools</h2>
+<p>{% for t in doc.tools %}<a href="/ui/tools/{{ t }}"><code>{{ t }}</code></a> {% endfor %}
+ <a href="/ui/tools/validate_dot"><code>validate_dot</code></a> <a href="/ui/tools/get_capabilities"><code>get_capabilities</code></a></p>
+{% if doc.tools_missing %}<p class="muted">Not in this Graphviz build, so not registered: {{ doc.tools_missing | join(", ") }}.</p>{% endif %}
+
+<h2 id="engines">Layout engines</h2>
+<p>{{ doc.layout_engines | join(", ") }}</p>
+
+<h2 id="formats">Output formats</h2>
+<table>
+<thead><tr><th>Format <code>T</code></th><th>MIME</th><th>Returned as</th><th>Default renderer</th><th>Renderer combinations</th></tr></thead>
+<tbody>
+{% for f in doc.output_formats %}
+<tr><td><code>{{ f.format }}</code></td><td>{{ f.mime }}</td><td>{{ f.result }}</td><td>{{ f.default or "-" }}</td><td>{{ f.renderers | join(", ") }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+
+<h2 id="policy">Attribute policy: {{ doc.attribute_policy.mode }}</h2>
+{% if doc.attribute_policy.mode == "unrestricted" %}<p class="bad"><strong>Unrestricted: no attribute checks and file loading is enabled.</strong></p>{% endif %}
+<p>{{ doc.attribute_policy.rule }}</p>
+<p><strong>Deny list:</strong> {{ doc.attribute_policy.deny | join(", ") or "-" }}</p>
+<p><strong>Value constraints:</strong></p>
+<ul>{% for k, v in doc.attribute_policy.constraints.items() %}<li><code>{{ k }}</code>: {{ v }}</li>{% endfor %}</ul>
+{% if doc.attribute_policy.mode == "allowlist" %}<details><summary>Allow list ({{ doc.attribute_policy.allow | length }} names)</summary><p>{{ doc.attribute_policy.allow | join(", ") }}</p></details>{% endif %}
+<p>Every attribute with its status under this policy: the <code>{{ doc.documentation.attributes_resource }}</code> resource. Official reference: <a href="{{ doc.documentation.official_attributes }}">{{ doc.documentation.official_attributes }}</a>.</p>
+
+<h2 id="limits">Limits</h2>
+<table><tbody>{% for k, v in doc.limits.items() %}<tr><th>{{ k }}</th><td>{{ v }}</td></tr>{% endfor %}</tbody></table>
+
+<h2 id="fonts">Fonts</h2>
+<p>{{ doc.fonts | join(", ") or "not reported" }}</p>
+
+<h2>Raw JSON</h2>
+<pre id="capabilities-json">{{ raw }}</pre>
+{% endblock %}

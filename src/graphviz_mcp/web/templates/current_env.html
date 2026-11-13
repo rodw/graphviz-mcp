@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Current environment{% endblock %}
+{% block main %}
+<h1>Current environment</h1>
+<p>The settings this server is running with. See <a href="/ui/docs/env-vars">Environment variables</a> for what each one does.</p>
+<table>
+<thead><tr><th>Variable</th><th>Current value</th><th>Default</th></tr></thead>
+<tbody>
+{% for r in rows %}
+<tr><td><code>{{ r.env }}</code></td><td><code>{{ r.value }}</code></td><td class="muted">{{ r.default }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endblock %}

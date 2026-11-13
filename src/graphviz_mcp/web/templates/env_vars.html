@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Environment variables{% endblock %}
+{% block main %}
+<h1>Environment variables</h1>
+<p>graphviz-mcp is configured entirely through environment variables with the <code>GVMCP_</code> prefix, read once at startup. An invalid value stops the server with an error. Unset or empty variables use the default. The values in effect right now are listed on the <a href="/ui/status/current-env">current environment</a> page.</p>
+<h2>Using them</h2>
+<p>With Docker, pass them with <code>-e</code>:</p>
+<pre>docker run --rm -p 127.0.0.1:8000:8000 \
+  -e GVMCP_TIMEOUT_S=60 -e GVMCP_ATTR_POLICY=allowlist \
+  graphviz-mcp</pre>
+<p>Without Docker, export them before starting the server:</p>
+<pre>GVMCP_PORT=9000 GVMCP_LOG_LEVEL=DEBUG graphviz-mcp</pre>
+<p>Binding to a non-localhost name requires adding that name to <code>GVMCP_ALLOWED_HOSTS</code>, otherwise requests with that <code>Host</code> header are refused. In the Docker image the server listens on <code>0.0.0.0</code> inside the container; publish the port on <code>127.0.0.1</code> to keep it local.</p>
+{% for g in env_groups %}
+<h2>{{ g }}</h2>
+<table>
+<thead><tr><th>Variable</th><th>Default</th><th>Meaning</th></tr></thead>
+<tbody>
+{% for v in vars if v.group == g %}
+<tr><td><code>{{ v.env }}</code></td><td>{{ v.default }}</td><td>{{ v.meaning }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+{% endfor %}
+{% endblock %}
