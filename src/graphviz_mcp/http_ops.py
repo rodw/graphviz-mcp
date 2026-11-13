@@ -6,13 +6,14 @@ import asyncio
 import platform
 import time
 from importlib import metadata
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-if TYPE_CHECKING:
-    from .server import App
+from .app import App
+from .meta import package_version
+from .web.routes import register_web_routes
 
 _STARTED = time.monotonic()
 _NO_STORE = {"Cache-Control": "no-store"}
@@ -23,8 +24,6 @@ def _json(data: dict[str, Any], status: int = 200) -> JSONResponse:
 
 
 def version_document(app: App) -> dict[str, Any]:
-    from .server import package_version
-
     try:
         sdk = metadata.version("mcp")
     except metadata.PackageNotFoundError:  # pragma: no cover
@@ -110,8 +109,6 @@ def register_http_routes(app: App) -> None:
     @server.custom_route("/version", methods=["GET"])
     async def version(request: Request) -> Response:
         return _json(version_document(app))
-
-    from .web.routes import register_web_routes
 
     register_web_routes(app)
 

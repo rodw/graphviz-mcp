@@ -53,7 +53,9 @@ src/graphviz_mcp/
   web/          Web UI rendering and static assets
   data/         attribute lists and descriptions, DOT language reference
   runner.py     the only place a process is spawned
-  server.py     MCP and HTTP server wiring
+  server.py     MCP and HTTP server wiring and startup
+  app.py        the assembled App object (settings, capabilities, runner, service, MCP server)
+  meta.py       server instructions text and package version
   extras.py     validate_dot, get_capabilities
   config.py     GVMCP_* settings
 docs/

@@ -4,17 +4,15 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from mcp_types import BlobResourceContents, EmbeddedResource, ImageContent, TextContent
 
+from ..app import App
 from ..formats import base_format, describe
 from ..tools.argv import MAX_VALUE_LEN
 from ..tools.service import ToolResult
 from ..tools.specs import Param, Program
-
-if TYPE_CHECKING:
-    from ..server import App
 
 SAMPLE_DOT = 'digraph G {\n  rankdir=LR;\n  a -> b -> c;\n  a -> c [label="shortcut"];\n}\n'
 CSP = (

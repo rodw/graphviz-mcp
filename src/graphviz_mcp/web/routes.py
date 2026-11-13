@@ -4,23 +4,22 @@ from __future__ import annotations
 
 import json
 from importlib import resources
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from urllib.parse import parse_qs
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse, Response
 
+from ..app import App
 from ..extras import _data, capabilities_document, render_attributes, validate_document
+from ..meta import INSTRUCTIONS
 from ..security import allowed_origins, origin_allowed
 from ..tools.service import ToolFailure
 from ..tools.specs import PROGRAMS
 from . import envinfo
 from .content import read_doc, render_markdown, rendered_doc
 from .render import SECURITY_HEADERS, FormError, build_fields, parse_form, present
-
-if TYPE_CHECKING:
-    from ..server import App
 
 GROUPS = [
     ("layout", "Layout and rendering"),
@@ -56,7 +55,6 @@ def register_web_routes(app: App) -> None:
     origins = allowed_origins(app.allowed_hosts)
     max_body = app.settings.max_input_bytes * 4 + 64_000
     favicon = resources.files("graphviz_mcp.web").joinpath("static", "favicon.ico").read_bytes()
-    from ..server import INSTRUCTIONS  # deferred: server imports this package while it is being built
 
     # versions shown in every page footer; fixed for the life of the process
     base = capabilities_document(app)

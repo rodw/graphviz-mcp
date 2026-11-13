@@ -6,19 +6,18 @@ import json
 import platform
 import re
 from importlib import metadata, resources
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import Annotated, Any
 
 from mcp_types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import Field
 
+from .app import App
 from .attributes import ATTRS_RESOURCE, ATTRS_URL, DOT_LANGUAGE_RESOURCE, build_view, render_markdown
+from .meta import package_version
 from .policy import PolicyViolation
 from .runner import RunnerError, scrub
 from .tools import catalog
 from .tools.service import ToolFailure
-
-if TYPE_CHECKING:
-    from .server import App
 
 _ANNOT = ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
 _LINE = re.compile(r"syntax error in line (\d+)(?: near (.*))?", re.I)
@@ -61,7 +60,7 @@ def capabilities_document(app: App) -> dict[str, Any]:
     return {
         "server": {
             "name": "graphviz-mcp",
-            "version": _version(),
+            "version": package_version(),
             "python": platform.python_version(),
             "mcp_sdk": _sdk_version(),
         },
@@ -86,12 +85,6 @@ def capabilities_document(app: App) -> dict[str, Any]:
             "raster_preflight": s.raster_preflight,
         },
     }
-
-
-def _version() -> str:
-    from .server import package_version
-
-    return package_version()
 
 
 def _sdk_version() -> str:
