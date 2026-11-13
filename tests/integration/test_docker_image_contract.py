@@ -164,4 +164,4 @@ def test_invalid_policy_file_stops_the_container(tmp_path: Path) -> None:
 
 def test_python_version_documented() -> None:
     out = sh("python3 --version").stdout.decode()
-    assert out.startswith("Python 3.13") and sys.version_info >= (3, 12)
+    assert out.startswith("Python 3.13") and sys.version_info >= (3, 13)

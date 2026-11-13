@@ -111,7 +111,7 @@ Claude Desktop (stdio) in `claude_desktop_config.json`:
                "--read-only", "--cap-drop=ALL", 
                "--tmpfs", "/tmp:rw,noexec,nosuid,size=256m",
                "--security-opt", "no-new-privileges", 
-               "--pids-limit=512", "--memory 2g",
+               "--pids-limit=512", "--memory=2g",
                "ghcr.io/rodw/graphviz-mcp:latest", "--stdio"]
     }
   }
@@ -171,7 +171,7 @@ Graphviz-mcp can be configured through environment variables passed to the serve
 
 Graphviz-MCP treats all input as untrusted and enforces a strict access policy by default: The service runs as a non-root user on a read-only filesystem. Callers cannot read, write or execute arbitrary resources. Inputs are validated and bounds-checked, and multiple layers of security limit the time, memory, output size, and concurrency of requests to protect service availability and prevent run-away resource consumption, whether accidental or malicious.
 
-However Graphviz-MCP is NOT hardened for deployment on the public internet. It has no TLS or authentication support, and only the most rudimentary rate-limiting capabilities. It designed to run on single machine or private network, used by a trusted operator.
+However Graphviz-MCP is NOT hardened for deployment on the public internet. It has no TLS or authentication support, and only the most rudimentary rate-limiting capabilities. It is designed to be run on a single machine or private network, used by a trusted operator.
 
 See [SECURITY.md](SECURITY.md) and [docs/attribute-security-policy.md](docs/attribute-security-policy.md) for more information.
 

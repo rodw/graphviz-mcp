@@ -20,11 +20,13 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--port", type=int, help="port (default 8000, or GVMCP_PORT)")
     parser.add_argument("--version", action="store_true", help="print the version and exit")
     args = parser.parse_args(argv)
-    from .server import main_sync, package_version
+    from .meta import package_version
 
     if args.version:
         print(package_version())
         return
+    from .server import main_sync
+
     try:
         settings = load_settings()
         overrides = {k: v for k, v in (("host", args.host), ("port", args.port)) if v is not None}

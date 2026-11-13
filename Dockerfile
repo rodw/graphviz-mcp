@@ -75,7 +75,7 @@ RUN test -n "${APP_VERSION}" || \
     { echo "APP_VERSION build argument is required" >&2; exit 1; }
 LABEL org.opencontainers.image.title="graphviz-mcp" \
       org.opencontainers.image.version="${APP_VERSION}" \
-      org.opencontainers.image.description="MCP server exposing the Graphviz suite (Graphviz ${GV_VERSION})" \
+      org.opencontainers.image.description="MCP server exposing the Graphviz tool suite." \
       org.opencontainers.image.source="https://github.com/rodw/graphviz-mcp" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.base.name="${DEBIAN_IMAGE_BASENAME}" \

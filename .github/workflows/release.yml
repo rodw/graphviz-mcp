@@ -1,6 +1,10 @@
 name: Release
 
 # Pushes a multi-arch Docker image (linux/amd64 + linux/arm64) to GHCR when a version tag is pushed.
+# GHCR builds the package page (description, source link, license) from annotations on the multi-arch image index,
+# not from the Dockerfile LABELs, so the manifest job sets them when it creates the index.
+# The tagged commit must have a successful CI run (ci-gate), and each pushed image is scanned (Trivy, size) before
+# any version tag is created.
 # GHCR path: ghcr.io/<owner>/graphviz-mcp  (<owner> is the repository owner, lower-cased).
 
 on:
@@ -33,9 +37,42 @@ jobs:
             || { echo "::error::$GITHUB_REF_NAME is not on main; merge the release/hotfix branch into main first" >&2; exit 1; }
       - run: python3 scripts/check_release_version.py --tag "$GITHUB_REF_NAME" --require-tag
 
+  ci-gate:
+    name: Require a successful CI run for this commit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60 # may wait for an in-progress CI run (the arm64 image job is the longest)
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Wait for / check the CI run on the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            runs="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" \
+                      --json databaseId,status,conclusion,url --limit 20)"
+            if jq -e 'any(.[]; .conclusion == "success")' <<< "$runs" > /dev/null; then
+              echo "CI succeeded for $GITHUB_SHA"; exit 0
+            fi
+            pending="$(jq -r '[.[] | select(.status != "completed")][0].databaseId // empty' <<< "$runs")"
+            if [ -n "$pending" ]; then # CI is still running (eg. main and the tag were pushed together)
+              gh run watch "$pending" --repo "$GITHUB_REPOSITORY" --interval 30 --exit-status > /dev/null \
+                || { echo "::error::CI failed for $GITHUB_SHA"; exit 1; }
+              continue # look again: the finished run should now be a success
+            fi
+            if [ "$(jq length <<< "$runs")" -gt 0 ]; then
+              echo "::error::CI did not succeed for $GITHUB_SHA: $(jq -r '.[0].url' <<< "$runs")"; exit 1
+            fi
+            echo "no CI run for $GITHUB_SHA yet (attempt $attempt/10); waiting"; sleep 30
+          done
+          echo "::error::no CI run found for $GITHUB_SHA; push the release commit to main, let CI finish, then re-run this workflow"
+          exit 1
+
   build:
     name: Build ${{ matrix.arch }}
-    needs: release-check
+    needs: [release-check, ci-gate]
     strategy:
       matrix:
         include:
@@ -73,6 +110,14 @@ jobs:
           cache-to: type=gha,scope=${{ matrix.arch }},mode=max
       - id: digest
         run: echo "${{ matrix.arch }}=${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+      # A failure here fails this job, so the manifest job (which needs it) creates no version tags and no release.
+      # The pushed digest stays in GHCR, untagged.
+      - name: Scan the pushed image (Trivy, image size)
+        run: |
+          ref="${DOCKER_IMAGE,,}@${{ steps.build.outputs.digest }}"
+          docker pull "$ref"
+          docker tag "$ref" "release-scan:${{ matrix.arch }}"
+          make audit.docker.image-run AUDIT_IMAGE="release-scan:${{ matrix.arch }}"
 
   manifest:
     name: Merge manifest
@@ -91,20 +136,30 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
         uses: docker/metadata-action@v6
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: index
         with:
           images: ${{ env.DOCKER_IMAGE }}
+          annotations: |
+            org.opencontainers.image.title=graphviz-mcp
+            org.opencontainers.image.description=MCP server exposing the Graphviz tool suite.
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
       - name: Create and push the multi-arch manifest
         run: |
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          mapfile -t tags < <(jq -r '.tags[] | "-t=" + .' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          mapfile -t annotations < <(jq -r '.annotations[] | "--annotation=" + .' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          docker buildx imagetools create "${tags[@]}" "${annotations[@]}" \
             ${{ env.DOCKER_IMAGE }}@${{ needs.build.outputs.digest-amd64 }} \
             ${{ env.DOCKER_IMAGE }}@${{ needs.build.outputs.digest-arm64 }}
       - name: Inspect
-        run: docker buildx imagetools inspect ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.version }}
+        run: |
+          docker buildx imagetools inspect ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.version }}
+          # the GHCR package page needs these annotations on the index itself
+          docker buildx imagetools inspect --raw ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.version }} \
+            | jq -e '.annotations["org.opencontainers.image.description"] | length > 0'
 
   github-release:
     name: Create the GitHub Release

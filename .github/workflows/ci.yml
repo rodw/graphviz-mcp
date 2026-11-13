@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: pip
           cache-dependency-path: requirements.lock
       - run: python -m pip install -e '.[dev]' -c requirements.lock
@@ -33,7 +33,7 @@ jobs:
       - run: python scripts/gen_tool_docs.py --check
       - run: python scripts/gen_notices.py --check
       - run: python scripts/check_release_version.py
-      - run: pytest
+      - run: make test-coverage.unit-run VENV_PYTEST_EXE=pytest # unit tests; fails below COVERAGE_MIN_UNIT in the Makefile
 
   dockerfile-lint:
     runs-on: ubuntu-24.04
@@ -71,7 +71,7 @@ jobs:
           cache-to: type=gha,scope=${{ matrix.arch }},mode=max
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: pip
           cache-dependency-path: requirements.lock
       - run: python -m pip install -e '.[dev]' -c requirements.lock
@@ -86,27 +86,39 @@ jobs:
           response="$(printf '%s\n' "$request" \
             | docker run -i --rm --network=none --read-only --tmpfs /tmp --cap-drop=ALL graphviz-mcp:ci --stdio 2>/dev/null)"
           grep -q '"graphviz-mcp"' <<< "$response"
-      # Report only: the tests above are the gate. This runs the same tests again against a coverage-instrumented variant
-      # of the image just built (Dockerfile.test-coverage) to show which lines of src/ they exercise inside the containers.
-      - name: Docker image tests with coverage (report only)
+      # The same tests run again against a coverage-instrumented variant of the image just built (Dockerfile.test-coverage)
+      # to measure which lines of src/ they exercise inside the containers. The step fails if the image tests' line
+      # coverage is below COVERAGE_MIN_DOCKER (see the Makefile), then the unit and image data are combined and the
+      # combined coverage must reach COVERAGE_MIN_COMBINED.
+      - name: Docker image tests with coverage
         if: matrix.arch == 'amd64'
-        continue-on-error: true
         run: |
           docker build --build-arg BASE=graphviz-mcp:ci \
             --build-arg COVERAGE_VERSION="$(python -c 'import coverage; print(coverage.__version__)')" \
             -t graphviz-mcp:ci-coverage - < Dockerfile.test-coverage
           make test-coverage.docker-image-run COVERAGE_IMAGE=graphviz-mcp:ci-coverage VENV_PYTEST_EXE=pytest VENV_PYTHON_EXE=python
+      - name: Combined unit and Docker image test coverage
+        if: matrix.arch == 'amd64'
+        run: |
+          make test-coverage.unit-run VENV_PYTEST_EXE=pytest
+          make test-coverage.all-run VENV_PYTHON_EXE=python
       - name: Coverage summary
         if: matrix.arch == 'amd64' && always()
         run: |
           if [ -f .coverage-docker/.coverage ]; then
-            echo '### Docker image test coverage (line coverage of src/graphviz_mcp, report only)' >> "$GITHUB_STEP_SUMMARY"
+            echo '### Docker image test coverage (line coverage of src/graphviz_mcp)' >> "$GITHUB_STEP_SUMMARY"
             COVERAGE_FILE=.coverage-docker/.coverage python -m coverage report --skip-empty --format=markdown >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f .coverage-all/.coverage ]; then
+            echo '### Combined unit and Docker image test coverage (line coverage of src/graphviz_mcp)' >> "$GITHUB_STEP_SUMMARY"
+            COVERAGE_FILE=.coverage-all/.coverage python -m coverage report --skip-empty --format=markdown >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Upload coverage report
         if: matrix.arch == 'amd64' && always()
         uses: actions/upload-artifact@v7
         with:
           name: docker-image-coverage
-          path: .coverage-docker/html
+          path: |
+            .coverage-docker/html
+            .coverage-all/html
           if-no-files-found: ignore

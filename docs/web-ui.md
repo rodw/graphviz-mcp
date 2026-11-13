@@ -20,7 +20,7 @@ Calls made through the UI go through the same code as MCP calls, so they get the
 | `/ui/docs` | Reference pages for the environment variables and the attribute security policy. |
 | `/ui/status/current-env` | The current environment variable [configuration](configuration.md) the server is running with. |
 | `/health` | Liveness. (JSON) |
-| `/ready` | Readiness. Returns 503 until the capability check has passed and a trivial `dot` run works. (JSON) |
+| `/ready` | Readiness. Returns 503 until the capability check has passed and a trivial `dot` run works. A successful run is remembered for 30 seconds, and the check does not use one of the server's call slots, so a busy server still reports ready. (JSON) |
 | `/version` | The service, Graphviz, Python and MCP SDK versions. (JSON) |
 | `/ui/legal` | The license and the third-party notices. |
 

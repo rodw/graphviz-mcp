@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "graphviz-mcp"
-version = "0.2.0"
+version = "0.3.0"
 description = "An MCP service for the full Graphviz tool suite"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 license = { text = "MIT" }
 license-files = ["LICENSE"]
 authors = [ { name = "Rodney Waldhoff" }, { name = "graphviz-mcp contributors" } ]
@@ -44,7 +44,7 @@ packages = ["src/graphviz_mcp"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py312"
+target-version = "py313"
 src = ["src", "tests"]
 extend-exclude = ["scratch", ".scratch", ".claude"]
 
@@ -57,7 +57,7 @@ ignore = ["S101", "S603", "RUF012", "ASYNC109", "S104"]
 "scripts/**" = ["S", "E501"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 strict = true
 files = ["src", "scripts", "tests"]
 mypy_path = "src"
@@ -76,6 +76,8 @@ markers = [
 ]
 addopts = "-ra -m 'not docker_image'"
 
+# The minimum coverage gates (unit, Docker image, combined) are in the Makefile (COVERAGE_MIN_*), not in a `fail_under`
+# here: one value cannot express three thresholds, and pytest-cov would apply it to every --cov run, partial ones too.
 [tool.coverage.paths]
 # the Docker image installs the package (non-editable) under site-packages; map it back onto the repo's sources
 source = ["src/graphviz_mcp", "*/site-packages/graphviz_mcp"]
