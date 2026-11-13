@@ -21,7 +21,13 @@ RUN test -n "${COVERAGE_VERSION}" \
     && /v/bin/pip install --no-cache-dir "coverage==${COVERAGE_VERSION}"
 
 FROM ${BASE}
-# The runtime image uses Python 3.13; the import check below fails if that changes.
-COPY --from=coverage-builder /v/lib/python3.13/site-packages/coverage /opt/venv/lib/python3.13/site-packages/coverage
-RUN /opt/venv/bin/python -c "import coverage"
+# The site-packages directories are derived from each interpreter, so no Python version is hardcoded here.
+# Both interpreters come from the same Debian base, so the builder's coverage build matches the runtime's Python.
+USER root
+RUN --mount=from=coverage-builder,source=/v,target=/v \
+    src="$(/v/bin/python -c 'import sysconfig; print(sysconfig.get_path("purelib"))')" \
+    && dst="$(/opt/venv/bin/python -c 'import sysconfig; print(sysconfig.get_path("purelib"))')" \
+    && cp -r "${src}/coverage" "${dst}/" \
+    && /opt/venv/bin/python -c "import coverage"
+USER 10001:10001
 ENTRYPOINT ["/opt/venv/bin/python", "-m", "coverage", "run", "--parallel-mode", "--data-file=/cov/.coverage", "--source=graphviz_mcp", "-m", "graphviz_mcp"]
