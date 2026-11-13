@@ -32,6 +32,7 @@ jobs:
       - run: python scripts/check_licenses.py
       - run: python scripts/gen_tool_docs.py --check
       - run: python scripts/gen_notices.py --check
+      - run: python scripts/gen_attribute_list.py --check
       - run: python scripts/check_release_version.py
       - run: make test-coverage.unit-run VENV_PYTEST_EXE=pytest # unit tests; fails below COVERAGE_MIN_UNIT in the Makefile
 
