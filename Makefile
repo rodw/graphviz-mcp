@@ -27,9 +27,9 @@ MAKEFLAGS += --no-builtin-rules
 .PHONY: build build.docker-image build.docker-image-coverage rebuild.docker-image
 .PHONY: test test.unit test.docker-image
 .PHONY: test-coverage test-coverage.unit test-coverage.docker-image test-coverage.docker-image-run
-.PHONY: run-http run-stdio start stop restart status logs
+.PHONY: run run-http run-stdio start stop restart status logs
 .PHONY: clean clean-all uninstall
-.PHONY: clean.python clean.python.bytecode clean.python.caches clean.python.venv clean.stamps
+.PHONY: clean.python clean.python.bytecode clean.python.caches clean.python.venv clean.stamps clean.macos
 .PHONY: clean.test clean.test-coverage clean.test.cache
 .PHONY: clean.docker clean.docker.containers clean.docker.images clean.docker.volumes
 .PHONY: docker.build docker.image.build docker.dockerfile.lint
@@ -388,7 +388,9 @@ $(DOCKER_COVERAGE_IMAGE_STAMP): $(DOCKER_IMAGE_STAMP) Dockerfile.test-coverage $
 
 
 #--------------------------------------------- daemon-ish service management --
-run-http: docker.check-daemon $(DOCKER_IMAGE_STAMP) # run the HTTP server in the foreground
+run: run-http # alias for run-http
+
+run-http: docker.check-daemon $(DOCKER_IMAGE_STAMP) ## run the HTTP server in the foreground
 	@"${HOST_DOCKER_EXE}" run --rm --name "$(SERVICE_CONTAINER_NAME)" -p "$(SERVICE_HTTP_BIND_ADDR):$(SERVICE_HTTP_PORT):8000" \
 		$(SERVICE_HARDENING_ARGS) $(SERVICE_DOCKER_ARGS) "$(SERVICE_IMAGE)" --http
 
@@ -446,7 +448,7 @@ logs: docker.check-daemon ## tail the HTTP server logs
 
 
 #--------------------------------------------------------------------- clean --
-clean: clean.python clean.test clean.stamps ## remove generated artifacts (keeps venv and docker images)
+clean: clean.python clean.test clean.stamps clean.macos ## remove generated artifacts (keeps venv and docker images)
 
 clean-all: clean clean.python.venv clean.docker ## remove all generated artifacts (including venv and docker images)
 
@@ -461,6 +463,9 @@ clean.python.caches: # remove ruff and mypy caches
 clean.python.venv: # remove the python venv (and everything installed in it)
 	@$(call guard_rm_path,${VENV_DIR},VENV_DIR)
 	rm -rf -- "${VENV_DIR}" "$(PYTHON_DEPS_STAMP)"
+
+clean.macos: # remove macOS .DS_Store files
+	find . -path "./${VENV_DIR}" -prune -o -path ./.git -prune -o -type f -name .DS_Store -exec rm -f {} +
 
 clean.stamps: # remove the freshness-tracking stamp files (the next build redoes every stamped step)
 	@$(call guard_rm_path,${STAMP_DIR},STAMP_DIR)
