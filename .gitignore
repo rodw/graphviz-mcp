@@ -16,3 +16,5 @@ coverage.xml
 .coverage-docker/
 .coverage-all/
 .make/
+
+.DS_Store

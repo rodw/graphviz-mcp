@@ -28,7 +28,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SEMVER = re.compile(r"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$")
 IMAGE_REF = re.compile(r"graphviz-mcp:(\d+\.\d+\.\d+[0-9A-Za-z.-]*)")
-DOC_FILES = ["README.md", *sorted(str(p.relative_to(ROOT)) for p in (ROOT / "docs").glob("*.md"))]
+DOC_FILES = [
+    "README.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    *sorted(str(p.relative_to(ROOT)) for p in (ROOT / "docs").glob("*.md")),
+]
 
 
 def project_version() -> str:

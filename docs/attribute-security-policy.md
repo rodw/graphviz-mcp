@@ -223,12 +223,14 @@ That file is the authoritative record of the defaults, including the reasons for
 
 Asking for a PNG or other bitmap format at a large `size`, `dpi` or `pad` can produce an enormous image. In `denylist` and `allowlist` modes, the server estimates the pixel count of such a result before producing it and refuses requests above 50 million pixels, with a message that suggests reducing `size` or `dpi`, or choosing a vector format such as SVG. The estimate is slightly generous, so a request very close to the limit may be refused.
 
-Two addtional settings adjust this behavior:
+Two additional settings adjust this behavior:
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `GVMCP_MAX_RASTER_PIXELS` | `50000000` | The largest image, in pixels, that the server will produce. |
 | `GVMCP_RASTER_PREFLIGHT` | `true` | When `true`, the server runs a quick layout to measure the true size. When `false`, it relies on the graph's `size` attribute alone, which is faster but less precise. |
+
+See [configuration.md](configuration.md) for more information on these and other configuration parameters.
 
 ## Troubleshooting
 

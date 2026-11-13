@@ -29,6 +29,13 @@ dev = [
   "pip-licenses>=5",
 ]
 
+[project.urls]
+Homepage = "https://github.com/rodw/graphviz-mcp"
+Repository = "https://github.com/rodw/graphviz-mcp"
+Issues = "https://github.com/rodw/graphviz-mcp/issues"
+Changelog = "https://github.com/rodw/graphviz-mcp/releases"
+Documentation = "https://github.com/rodw/graphviz-mcp#readme"
+
 [project.scripts]
 graphviz-mcp = "graphviz_mcp.__main__:main"
 
