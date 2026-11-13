@@ -195,6 +195,7 @@ RASTER_CASES = {
     "dpi": "digraph { dpi=200; a -> b -> c -> d }",
     "size down": 'digraph { size="2,2"; a -> b -> c -> d -> e -> f }',
     "size up": 'digraph { size="6,6!"; a -> b }',
+    "size up + dpi": 'digraph { size="30,30!"; dpi=200; a -> b -> c -> a}',
     "pad": "digraph { pad=1.5; a -> b }",
     "ratio": "digraph { ratio=2; a -> b }",
     "rotate": "digraph { rotate=90; a -> b -> c }",
