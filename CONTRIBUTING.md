@@ -24,8 +24,12 @@ make test.unit                # unit tests
 make test.docker-image        # image tests (builds the image first if it is stale)
 make test                     # unit and image tests
 make audit                    # licenses, release version, generated docs, Python lint and types, Dockerfile lint
+make test-coverage.unit       # unit tests with a coverage report
+make test-coverage.docker-image  # image tests with a coverage report (builds the coverage image first if it is stale)
 make test-coverage            # unit and image tests with one combined coverage report
 ```
+
+The coverage targets enforce minimum net line coverage of `src/graphviz_mcp`: 65% for the unit tests (`make test-coverage.unit`), 85% for the image tests (`make test-coverage.docker-image`) and 90% for the two combined (`make test-coverage`). They fail when coverage is lower. The limits are the `COVERAGE_MIN_UNIT`, `COVERAGE_MIN_DOCKER` and `COVERAGE_MIN_COMBINED` variables in the Makefile; override one on the command line (for example `make test-coverage.unit COVERAGE_MIN_UNIT=0 PYTEST_ARGS='-k runner'`) when you run only part of a suite.
 
 The unit tests need neither Graphviz nor Docker. Tests that depend on the pinned Graphviz (golden SVGs, renderers, security, concurrency) are marked `docker_image` and run against the built image. If a change to the image or to the test inputs alters the golden SVGs, regenerate them with `make update.test-fixtures.golden`.
 
@@ -73,7 +77,7 @@ tests/          unit tests, Docker image integration tests, golden fixtures
 
 ## Continuous integration
 
-[ci.yml](.github/workflows/ci.yml) runs on pushes to `main`, `develop`, `release/**` and `hotfix/**`, and on every pull request. It runs lint, type checks, unit tests and the license check, then lints the Dockerfile. It also builds the image on amd64 and arm64 and runs the image tests, a Trivy scan and a size check on each.
+[ci.yml](.github/workflows/ci.yml) runs on pushes to `main`, `develop`, `release/**` and `hotfix/**`, and on every pull request. It runs lint, type checks, unit tests (with the unit coverage minimum) and the license check, then lints the Dockerfile. It also builds the image on amd64 and arm64 and runs the image tests, a Trivy scan and a size check on each. On amd64 it then re-runs the image tests against a coverage-instrumented image and enforces the image and combined coverage minimums.
 
 The Dockerfile pins the base image by digest and the Graphviz source by SHA-256, and the final stage has no compiler. Dependabot opens its update pull requests against `develop`.
 

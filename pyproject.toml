@@ -76,6 +76,8 @@ markers = [
 ]
 addopts = "-ra -m 'not docker_image'"
 
+# The minimum coverage gates (unit, Docker image, combined) are in the Makefile (COVERAGE_MIN_*), not in a `fail_under`
+# here: one value cannot express three thresholds, and pytest-cov would apply it to every --cov run, partial ones too.
 [tool.coverage.paths]
 # the Docker image installs the package (non-editable) under site-packages; map it back onto the repo's sources
 source = ["src/graphviz_mcp", "*/site-packages/graphviz_mcp"]
