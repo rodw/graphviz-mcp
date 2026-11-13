@@ -1,6 +1,8 @@
 name: Release
 
 # Pushes a multi-arch Docker image (linux/amd64 + linux/arm64) to GHCR when a version tag is pushed.
+# GHCR builds the package page (description, source link, license) from annotations on the multi-arch image index,
+# not from the Dockerfile LABELs, so the manifest job sets them when it creates the index.
 # The tagged commit must have a successful CI run (ci-gate), and each pushed image is scanned (Trivy, size) before
 # any version tag is created.
 # GHCR path: ghcr.io/<owner>/graphviz-mcp  (<owner> is the repository owner, lower-cased).
@@ -134,20 +136,30 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
         uses: docker/metadata-action@v6
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: index
         with:
           images: ${{ env.DOCKER_IMAGE }}
+          annotations: |
+            org.opencontainers.image.title=graphviz-mcp
+            org.opencontainers.image.description=MCP server exposing the Graphviz tool suite.
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
       - name: Create and push the multi-arch manifest
         run: |
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          mapfile -t tags < <(jq -r '.tags[] | "-t=" + .' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          mapfile -t annotations < <(jq -r '.annotations[] | "--annotation=" + .' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          docker buildx imagetools create "${tags[@]}" "${annotations[@]}" \
             ${{ env.DOCKER_IMAGE }}@${{ needs.build.outputs.digest-amd64 }} \
             ${{ env.DOCKER_IMAGE }}@${{ needs.build.outputs.digest-arm64 }}
       - name: Inspect
-        run: docker buildx imagetools inspect ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.version }}
+        run: |
+          docker buildx imagetools inspect ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.version }}
+          # the GHCR package page needs these annotations on the index itself
+          docker buildx imagetools inspect --raw ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.version }} \
+            | jq -e '.annotations["org.opencontainers.image.description"] | length > 0'
 
   github-release:
     name: Create the GitHub Release
