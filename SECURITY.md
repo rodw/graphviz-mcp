@@ -1,7 +1,6 @@
 # Security Policy
 
-
-By default, graphviz-mcp treats all input as untrusted and enforces a strict access policy. However the server is NOT hardened for deployment on the public internet. It has no TLS or authentication, and only limited request throttling support. It designed for use on single machine or within a private network. 
+By default, graphviz-mcp treats all input as untrusted and enforces a strict access policy. However the server is NOT hardened for deployment on the public internet. It has no TLS or authentication, and only limited request throttling support. It is designed for use on a single machine or within a private network.
 
 ## Supported versions
 
@@ -36,10 +35,11 @@ docker run \
 * Publish to `127.0.0.1` only.
 * Pin an image tag such as `X.Y.Z` instead of `latest` when you want the same image every time.
 * With the stdio transport, add `--network=none`. The server needs no network at all.
-* `--memory` is the real (container-level) memory ceiling. `GVMCP_MEMORY_MB` (`RLIMIT_AS`) is a per-process safety net that limits address space, so keep it generous or pango and cairo mappings will fail spuriously.
-* Prefer `GVMCP_ATTR_POLICY=allowlist` for anything beyond personal use. See [attribute-security-policy.md](docs/attribute-security-policy.md) for etails.
+* `--memory` is the real (container-level) memory ceiling. `GVMCP_MEMORY_MB` is a per-process safety net that limits address space per internal Graphviz call.
+* Prefer `GVMCP_ATTR_POLICY=allowlist` for anything beyond personal use. See [attribute-security-policy.md](docs/attribute-security-policy.md) for details.
 * To serve other host names (a reverse proxy, a LAN name), add them to `GVMCP_ALLOWED_HOSTS`.
 
+See [docs/configuration.md](docs/configuration.md) for more information on the `GVMCP_*` configuration parameters.
 
 ## Threats and controls
 
