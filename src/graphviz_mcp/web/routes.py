@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from importlib import resources
 from typing import Any
 from urllib.parse import parse_qs
@@ -43,7 +44,8 @@ def ui_tools(app: App) -> list[dict[str, str]]:
     return items
 
 
-def register_web_routes(app: App) -> None:
+def register_web_routes(app: App) -> Callable[[int, str], Response]:
+    """Register the UI routes; returns the responder that words body-limit rejections as a themed error page."""
     server = app.server
     env = Environment(
         loader=PackageLoader("graphviz_mcp.web", "templates"),
@@ -53,7 +55,6 @@ def register_web_routes(app: App) -> None:
     )
     css = resources.files("graphviz_mcp.web").joinpath("static", "style.css").read_text("utf-8")
     origins = allowed_origins(app.allowed_hosts)
-    max_body = app.settings.max_input_bytes * 4 + 64_000
     favicon = resources.files("graphviz_mcp.web").joinpath("static", "favicon.ico").read_bytes()
 
     # versions shown in every page footer; fixed for the life of the process
@@ -157,12 +158,7 @@ def register_web_routes(app: App) -> None:
         fail = _check_request(request)
         if fail:
             return page("error.html", fail[0], title=fail[1], message=fail[2])
-        length = request.headers.get("content-length")
-        if length is not None and length.isdigit() and int(length) > max_body:
-            return page("error.html", 413, title="Too large", message="The submitted form is too large.")
-        body = await request.body()
-        if len(body) > max_body:
-            return page("error.html", 413, title="Too large", message="The submitted form is too large.")
+        body = await request.body()  # its size is already bounded by the BodyLimit middleware (server.http_app)
         parsed = parse_qs(body.decode("utf-8", "replace"), keep_blank_values=True, max_num_fields=200)
         form = {k: v[0] for k, v in parsed.items()}
         values = dict(form)
@@ -199,3 +195,10 @@ def register_web_routes(app: App) -> None:
         elif not origin_allowed(origin, origins):
             return 403, "Cross-origin request refused", "The Origin of this request is not allowed."
         return None
+
+    def reject(status: int, message: str) -> Response:
+        if status == 413:
+            return page("error.html", 413, title="Too large", message="The submitted form is too large.")
+        return page("error.html", status, title="Bad request", message=message)
+
+    return reject

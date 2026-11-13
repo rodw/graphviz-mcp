@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import platform
 import time
+from collections.abc import Callable
 from importlib import metadata
 from typing import Any
 
@@ -90,7 +91,8 @@ async def readiness(app: App) -> tuple[bool, str]:
     return await _smoke_test(app)
 
 
-def register_http_routes(app: App) -> None:
+def register_http_routes(app: App) -> Callable[[int, str], Response]:
+    """Register the operational and Web UI routes; returns the Web UI's body-limit rejection responder."""
     server = app.server
     probe = ReadinessProbe(app)
 
@@ -110,7 +112,7 @@ def register_http_routes(app: App) -> None:
     async def version(request: Request) -> Response:
         return _json(version_document(app))
 
-    register_web_routes(app)
+    return register_web_routes(app)
 
 
 __all__ = ["ReadinessProbe", "readiness", "register_http_routes", "version_document"]
