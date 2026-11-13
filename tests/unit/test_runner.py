@@ -113,6 +113,20 @@ async def test_queue_full_gives_busy(settings: Settings) -> None:
     assert runner.active == 0 and runner.waiting == 0
 
 
+async def test_slot_false_ignores_the_concurrency_limit(settings: Settings) -> None:
+    runner = Runner(replace(settings, concurrency=1, queue_size=1, queue_wait_s=5), {"sleep": SLEEP})
+    async with runner.workdir() as wd:
+        running = asyncio.create_task(runner.run("sleep", ["1"], workdir=wd))
+        waiting = asyncio.create_task(runner.run("sleep", ["0.1"], workdir=wd))
+        await asyncio.sleep(0.2)  # one call is running and the queue is full
+        with pytest.raises(Busy):
+            await runner.run("sleep", ["0"], workdir=wd)
+        r = await runner.run("sleep", ["0"], workdir=wd, slot=False)
+        assert r.returncode == 0
+        assert runner.active == 1 and runner.waiting == 1  # the unslotted run is not counted
+        await asyncio.gather(running, waiting)
+
+
 async def test_queue_wait_timeout_gives_busy(settings: Settings) -> None:
     runner = Runner(replace(settings, concurrency=1, queue_size=5, queue_wait_s=0.3), {"sleep": SLEEP})
     async with runner.workdir() as wd:
