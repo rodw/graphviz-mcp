@@ -178,11 +178,15 @@ class Runner:
         *,
         workdir: Path,
         timeout_s: float | None = None,
+        slot: bool = True,
     ) -> RunResult:
+        """Run ``program``. ``slot=False`` skips the concurrency limit (and the busy check) entirely."""
         binary = self._programs.get(program)
         if binary is None:
             raise UnknownProgram(f"program {program!r} is not available")
         timeout = self._s.timeout_s if timeout_s is None else timeout_s
+        if not slot:
+            return await self._spawn(binary, args, stdin, workdir, timeout)
         async with self._slot():
             return await self._spawn(binary, args, stdin, workdir, timeout)
 
