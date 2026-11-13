@@ -419,14 +419,14 @@ start: docker.check-daemon $(DOCKER_IMAGE_STAMP) ## start the HTTP server in the
 		|| { "${HOST_DOCKER_EXE}" rm -f "$$name" >/dev/null 2>&1; exit 1; }; \
 	if [ -n "$(HOST_CURL_EXE)" ] && command -v "$(HOST_CURL_EXE)" >/dev/null 2>&1; then \
 		i=0; \
-		until "$(HOST_CURL_EXE)" -fsS -o /dev/null "http://${SERVICE_HTTP_BIND_ADDR}:$(SERVICE_HTTP_PORT)/health" 2>/dev/null; do \
+		until "$(HOST_CURL_EXE)" -fsS -o /dev/null "http://${SERVICE_HTTP_BIND_ADDR}:$(SERVICE_HTTP_PORT)/ready" 2>/dev/null; do \
 			if [ "$$("${HOST_DOCKER_EXE}" inspect -f '{{.State.Running}}' "$$name")" != true ] || [ "$$i" -ge "$(SERVICE_START_TIMEOUT_SECONDS)" ]; then \
-				printf "$(STY_FAILURE)%s did not become healthy; last logs:$(STY_RESET)\n" "$$name" >&2; \
+				printf "$(STY_FAILURE)%s did not become ready; last logs:$(STY_RESET)\n" "$$name" >&2; \
 				"${HOST_DOCKER_EXE}" logs --tail=20 "$$name" >&2; exit 1; fi; \
 			i=$$((i + 1)); sleep 1; \
 		done; \
 	else \
-		printf "$(STY_WARN)WARNING:$(STY_RESET) HOST_CURL_EXE ('%s') is blank or not on the PATH; health check skipped\n" "$(HOST_CURL_EXE)" >&2; \
+		printf "$(STY_WARN)WARNING:$(STY_RESET) HOST_CURL_EXE ('%s') is blank or not on the PATH; server readiness check skipped\n" "$(HOST_CURL_EXE)" >&2; \
 	fi; \
 	printf "started %s ($(SERVICE_IMAGE))\n  Web UI: http://$(SERVICE_HTTP_BIND_ADDR):$(SERVICE_HTTP_PORT)/ui\n  MCP:    http://$(SERVICE_HTTP_BIND_ADDR):$(SERVICE_HTTP_PORT)/mcp\n" "$$name"
 
