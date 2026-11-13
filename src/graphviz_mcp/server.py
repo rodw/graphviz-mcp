@@ -17,7 +17,7 @@ from .http_ops import register_http_routes
 from .logging import configure_logging
 from .meta import INSTRUCTIONS, package_version
 from .policy import PolicyEngine, load_policy
-from .security import HostGuard, allowed_origins
+from .security import BodyLimit, BodyRule, HostGuard, allowed_origins, json_error
 from .tools.registry import register_tools
 from .tools.service import ToolService
 
@@ -45,12 +45,21 @@ async def build_app(settings: Settings) -> App:
 
 def http_app(app: App):  # type: ignore[no-untyped-def]
     """Starlette app: MCP at /mcp plus the operational endpoints and Web UI."""
-    register_http_routes(app)
+    web_reject = register_http_routes(app)
+    settings = app.settings
     hosts = app.allowed_hosts
     security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True, allowed_hosts=hosts, allowed_origins=allowed_origins(hosts)
     )
-    starlette_app = app.server.streamable_http_app(host=app.settings.host, transport_security=security)
+    starlette_app = app.server.streamable_http_app(
+        host=settings.host, transport_security=security, max_request_body_size=settings.max_mcp_body_bytes
+    )
+    # add_middleware puts the latest one outermost: HostGuard first (wrong Host never has its body read), then the cap
+    rules = [
+        BodyRule("/mcp", False, settings.max_mcp_body_bytes, json_error),
+        BodyRule("/ui/tools/", True, settings.max_form_body_bytes, web_reject),
+    ]
+    starlette_app.add_middleware(BodyLimit, rules=rules)
     starlette_app.add_middleware(HostGuard, hosts=hosts)
     return starlette_app
 

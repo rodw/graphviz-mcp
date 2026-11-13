@@ -224,6 +224,27 @@ async def test_oversized_form_rejected(ui: Any, docker_image_client: Any) -> Non
     assert r.status_code == 413
 
 
+async def test_oversized_chunked_bodies_are_refused_and_the_server_stays_up(ui: Any, docker_image_client: Any) -> None:
+    cap = (await capabilities(docker_image_client))["limits"]["max_input_bytes"]
+
+    async def stream(total: int) -> AsyncIterator[bytes]:  # no Content-Length: sent chunked
+        for _ in range(total // 65536 + 1):
+            yield b"a" * 65536
+
+    r = await ui.post("/ui/tools/dot", content=stream(cap * 4 + 200_000), headers=FORM)
+    assert r.status_code == 413
+    r = await ui.post("/mcp", content=stream(cap * 6 + 200_000), headers={"content-type": "application/json"})
+    assert r.status_code == 413
+    assert (await ui.get("/ready")).status_code == 200
+
+
+async def test_the_http_envelope_admits_a_json_escaped_input_near_the_cap(docker_image_client: Any) -> None:
+    cap = (await capabilities(docker_image_client))["limits"]["max_input_bytes"]
+    body = "digraph{\n" + "\n" * (cap - 20) + "a}"  # every newline is 2 bytes once JSON-escaped
+    r = await docker_image_client.call_tool("validate_dot", {"input": body})
+    assert not r.is_error, text_of(r)[:200]
+
+
 async def test_form_values_are_echoed_escaped(ui: Any) -> None:
     evil = 'digraph { a [label="</textarea><script>alert(1)</script>"] }'
     r = await post(ui, "dot", {"input": evil})
