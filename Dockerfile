@@ -4,7 +4,7 @@
 # =========================================================== VERSION CONFIG ==
 ARG APP_VERSION
 ARG DEBIAN_IMAGE_BASENAME=debian:trixie-slim
-ARG DEBIAN_IMAGE="${DEBIAN_IMAGE_BASENAME}@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad"
+ARG DEBIAN_IMAGE="${DEBIAN_IMAGE_BASENAME}@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2"
 ARG GV_VERSION=16.1.0
 ARG GV_SHA256=beea483ab130f456c1c3905f4f2e40778a9c493c3d73ae8012367d552d71ca84
 ARG GV_SOURCE_URL="https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/${GV_VERSION}/graphviz-${GV_VERSION}.tar.gz"
