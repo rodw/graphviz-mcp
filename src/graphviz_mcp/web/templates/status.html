@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Status{% endblock %}
+{% block main %}
+<h1>Status</h1>
+<p>Server status and configuration.</p>
+<ul class="tools">
+  <li><a href="/ui/status/current-env">Current environment</a> <span class="muted">the configuration the server is running with</span></li>
+  <li><a href="/health"><code>/health</code></a> <span class="muted">liveness</span></li>
+  <li><a href="/ready"><code>/ready</code></a> <span class="muted">readiness</span></li>
+  <li><a href="/version"><code>/version</code></a> <span class="muted">component versions</span></li>
+</ul>
+{% endblock %}

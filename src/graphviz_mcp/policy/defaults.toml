@@ -1,0 +1,85 @@
+# Built-in attribute policy defaults (see docs/attribute-security-policy.md for the audit behind them).
+# Names are matched case-insensitively. "html:img" is the pseudo-attribute for HTML-like label
+# <IMG> elements.
+
+# Attributes that make Graphviz read, or look up, files or paths on the server.
+# Evidence (Graphviz source): image/shapefile -> lib/common/shapes.c + gvusershape.c;
+# imagepath -> lib/common/input.c (search path for those); fontpath -> input.c; stylesheet ->
+# plugin/core/gvrender_core_svg.c (emits a reference, listed because it names a server-side file);
+# <IMG SRC> -> lib/common/htmltable.c via gvusershape.
+deny = ["image", "shapefile", "imagepath", "fontpath", "stylesheet", "html:img"]
+
+# Starter allow list for `allowlist` mode: common layout, styling and label attributes.
+allow = [
+  # general
+  "label", "xlabel", "headlabel", "taillabel", "comment", "id", "class", "tooltip", "target", "url", "href",
+  "svgid", "labelurl", "headurl", "tailurl", "edgeurl", "labeltooltip", "headtooltip", "tailtooltip", "edgetooltip",
+  "labeltarget", "headtarget", "tailtarget", "edgetarget", "labelhref", "headhref", "tailhref", "edgehref",
+  # color and style
+  "color", "fillcolor", "bgcolor", "fontcolor", "pencolor", "labelfontcolor", "colorscheme", "style",
+  "gradientangle", "penwidth", "peripheries", "truecolor",
+  # fonts
+  "fontname", "fontsize", "labelfontname", "labelfontsize", "fontnames",
+  # graph layout (shared)
+  "rankdir", "ranksep", "nodesep", "rank", "ratio", "size", "page", "pagedir", "viewport",
+  "margin", "pad", "dpi", "resolution", "splines", "concentrate", "compound", "clusterrank", "newrank",
+  "ordering", "outputorder", "center", "rotate", "landscape", "orientation", "layout", "labeljust", "labelloc",
+  "forcelabels", "nojustify", "quantum", "remincross", "searchsize", "mclimit", "nslimit", "nslimit1",
+  "normalize", "pack", "packmode", "charset",
+  # force-directed / neato / fdp / sfdp / circo / twopi / osage / patchwork
+  "overlap", "overlap_scaling", "overlap_shrink", "sep", "esep", "maxiter", "start", "epsilon", "mode", "model",
+  "damping", "defaultdist", "dim", "dimen", "k", "mindist", "root", "levels", "levelsgap", "smoothing",
+  "repulsiveforce", "beautify", "inputscale", "notranslate", "voro_margin", "pos", "pin", "group", "lp", "lheight",
+  "lwidth", "sortv", "area", "xdotversion",
+  # nodes
+  "shape", "width", "height", "fixedsize", "regular", "sides", "skew", "distortion", "labelangle", "nojustify",
+  "samplepoints", "peripheries", "orientation", "penwidth", "ordering", "z",
+  # edges
+  "arrowhead", "arrowtail", "arrowsize", "dir", "constraint", "minlen", "weight", "headport", "tailport",
+  "headclip", "tailclip", "samehead", "sametail", "labelfloat", "labeldistance", "decorate", "len",
+  "showboxes", "layer", "layers", "layerselect", "layersep", "layerlistsep",
+  # added after auditing every master attribute against the 16.1.0 source: none opens a file
+  # (imagepos/imagescale only place an image, and image is denied; _background ignores xdot images)
+  "lhead", "ltail", "scale", "rotation", "linelength", "radius", "cluster", "oneblock", "quadtree", "label_scheme",
+  "diredgeconstraints", "tbbalance", "imagepos", "imagescale", "_background",
+  # output-only attributes that Graphviz writes (it never reads a file for them)
+  "bb", "rects", "vertices", "xlp", "head_lp", "tail_lp",
+]
+
+# Value constraints (min/max for numbers, enum, regex) applied in every mode except `unrestricted`.
+[constraints.dpi]
+min = 0
+max = 300
+[constraints.resolution]
+min = 0
+max = 300
+[constraints.mclimit]
+min = 0
+max = 10
+[constraints.nslimit]
+min = 0
+max = 20
+[constraints.nslimit1]
+min = 0
+max = 20
+[constraints.searchsize]
+min = 0
+max = 100
+[constraints.maxiter]
+min = 0
+max = 10000
+[constraints.fontsize]
+min = 0
+max = 1000
+[constraints.peripheries]
+min = 0
+max = 20
+[constraints.penwidth]
+min = 0
+max = 100
+[constraints.samplepoints]
+min = 0
+max = 200
+[constraints.levels]
+min = 0
+max = 100

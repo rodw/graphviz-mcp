@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1.7
+# Coverage-instrumented variant of the graphviz-mcp image, used by `make test.docker-image.coverage`.
+#
+# The shipping image has no usable pip (it is stripped on purpose), so coverage is installed in a throwaway stage on
+# the same Debian base and only the package is copied in. Each server process writes `.coverage.<host>.pid<N>.<rand>`
+# into /cov (a bind mount of a world-writable host directory) when it exits.
+#
+# Build (no context needed):  docker build --build-arg BASE=graphviz-mcp:dev --build-arg COVERAGE_VERSION=<x.y.z> \
+#                               -t graphviz-mcp:coverage - < Dockerfile.test-coverage
+ARG BASE=graphviz-mcp:dev
+ARG DEBIAN_IMAGE=debian:trixie-slim
+
+FROM ${DEBIAN_IMAGE} AS coverage-builder
+ARG COVERAGE_VERSION
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# hadolint ignore=DL3008
+RUN test -n "${COVERAGE_VERSION}" \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-venv \
+    && python3 -m venv /v \
+    && /v/bin/pip install --no-cache-dir "coverage==${COVERAGE_VERSION}"
+
+FROM ${BASE}
+# The runtime image uses Python 3.13; the import check below fails if that changes.
+COPY --from=coverage-builder /v/lib/python3.13/site-packages/coverage /opt/venv/lib/python3.13/site-packages/coverage
+RUN /opt/venv/bin/python -c "import coverage"
+ENTRYPOINT ["/opt/venv/bin/python", "-m", "coverage", "run", "--parallel-mode", "--data-file=/cov/.coverage", "--source=graphviz_mcp", "-m", "graphviz_mcp"]

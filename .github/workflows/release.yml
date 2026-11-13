@@ -1,0 +1,131 @@
+name: Release
+
+# Pushes a multi-arch Docker image (linux/amd64 + linux/arm64) to GHCR when a version tag is pushed.
+# GHCR path: ghcr.io/<owner>/graphviz-mcp  (<owner> is the repository owner, lower-cased).
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOCKER_IMAGE: ghcr.io/${{ github.repository_owner }}/graphviz-mcp
+
+jobs:
+  release-check:
+    name: Check the tag matches the project version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Check the tagged commit is on main (git-flow releases are tagged on main)
+        run: |
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
+            || { echo "::error::$GITHUB_REF_NAME is not on main; merge the release/hotfix branch into main first" >&2; exit 1; }
+      - run: python3 scripts/check_release_version.py --tag "$GITHUB_REF_NAME" --require-tag
+
+  build:
+    name: Build ${{ matrix.arch }}
+    needs: release-check
+    strategy:
+      matrix:
+        include:
+          - { arch: amd64, platform: linux/amd64, runner: ubuntu-24.04 }
+          - { arch: arm64, platform: linux/arm64, runner: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest-amd64: ${{ steps.digest.outputs.amd64 }}
+      digest-arm64: ${{ steps.digest.outputs.arm64 }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Read the project version
+        id: version
+        run: echo "version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")" >> "$GITHUB_OUTPUT"
+      - id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          build-args: APP_VERSION=${{ steps.version.outputs.version }}
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.DOCKER_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          provenance: true
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,scope=${{ matrix.arch }},mode=max
+      - id: digest
+        run: echo "${{ matrix.arch }}=${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+
+  manifest:
+    name: Merge manifest
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.DOCKER_IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+      - name: Create and push the multi-arch manifest
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            ${{ env.DOCKER_IMAGE }}@${{ needs.build.outputs.digest-amd64 }} \
+            ${{ env.DOCKER_IMAGE }}@${{ needs.build.outputs.digest-arm64 }}
+      - name: Inspect
+        run: docker buildx imagetools inspect ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.version }}
+
+  github-release:
+    name: Create the GitHub Release
+    needs: manifest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write # only this job may write to the repository (to create the release)
+    steps:
+      - name: Create the release (notes are generated from merged PRs; see .github/release.yml)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Re-running the workflow must not fail because the release already exists.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release $TAG already exists; nothing to do."
+            exit 0
+          fi
+          flags=(--verify-tag --generate-notes)
+          [[ "$TAG" == *-* ]] && flags+=(--prerelease)
+          image="${DOCKER_IMAGE,,}:${TAG#v}"
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" \
+            --notes "Docker image: \`docker pull ${image}\`" "${flags[@]}"

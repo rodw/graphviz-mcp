@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block main %}
+{% if uri %}<p class="muted">MCP resource <code>{{ uri }}</code></p>{% endif %}
+<div class="doc">{{ body }}</div>
+{% endblock %}
