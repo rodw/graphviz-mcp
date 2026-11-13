@@ -13,6 +13,7 @@ import contextvars
 import os
 import shutil
 import signal
+import sys
 import tempfile
 import time
 from collections.abc import AsyncIterator, Mapping, Sequence
@@ -20,6 +21,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import Settings
+
+# Imported here, not inside _limits: that runs in the forked child (preexec_fn), where an import can deadlock.
+if sys.platform != "win32":
+    import resource
 
 _GRACE_S = 1.0
 _slot_held: contextvars.ContextVar[bool] = contextvars.ContextVar("gvmcp_slot_held", default=False)
@@ -59,9 +64,9 @@ class RunResult:
 
 
 def _limits(cpu_s: int, mem_bytes: int, fsize: int) -> None:
-    """preexec_fn: only calls setrlimit."""
-    import resource
-
+    """preexec_fn: runs in the forked child, so it must not import or take locks; only calls setrlimit."""
+    if sys.platform == "win32":  # pragma: no cover - the runner is POSIX-only (killpg, process_group)
+        return
     for which, value in (
         (resource.RLIMIT_CPU, cpu_s),
         (resource.RLIMIT_FSIZE, fsize),
