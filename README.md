@@ -194,3 +194,7 @@ Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers 
 Graphviz-MCP is released under an MIT license, see [LICENSE](LICENSE). 
 
 Graphviz (EPL-1.0) and the system libraries and fonts in the image keep their own licenses, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+---
+
+[![M8ven Score](https://m8ven.ai/badge/mcp/rodw-graphviz-mcp-vlqf1l?v=05eb8b08b52dce3c0e2576a6b6cf7c69)](https://m8ven.ai/mcp/rodw-graphviz-mcp-vlqf1l?s=readme)
